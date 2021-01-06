@@ -35,7 +35,6 @@
 
         static async Task Main(string[] args)
         {
-
             try
             {
                 // Console.SetWindowPosition(0, 0);
@@ -75,7 +74,7 @@
         {
             if (!File.Exists(SettingsFile))
             {
-                var settings = new AccountSettings { Query = DefaultQuery, Slicers = "Priority,Tags,IterationPath", Accounts = new[] { new Account { Name = "Account-1", Org = "Org-1", Project = "Project-1", Token = "PAT Token for Org-1/Project-1", Enabled = true }, new Account { Name = "Account-2", Org = "Org-2", Project = "Project-2", Token = "PAT Token for Org-2/Project-2", Enabled = true } } };
+                var settings = new AccountSettings { Query = DefaultQuery, Slicers = "Tags,Priority,IterationPath", Accounts = new[] { new Account { Name = "Account-1", Org = "Org-1", Project = "Project-1", Token = "PAT Token for Org-1/Project-1", Enabled = true }, new Account { Name = "Account-2", Org = "Org-2", Project = "Project-2", Token = "PAT Token for Org-2/Project-2", Enabled = true } } };
                 SetSettings(settings);
                 ColorConsole.WriteLine("Update settings here: ".Red(), SettingsFile);
             }
@@ -197,7 +196,9 @@
 
         private static void PrintAllWorkItems(List<WorkItem> items)
         {
-            foreach (var workItems in items.GroupBy(x => x.Fields.Tags))
+            var slicer = Settings.Slicers.Split(new[] { ' ', ',', ';' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+            ColorConsole.WriteLine($" {slicer} ".Black().OnWhite());
+            foreach (var workItems in items.GroupBy(x => x.Fields.GetPropertyValue(slicer)).OrderBy(x => x.Key))
             {
                 ColorConsole.WriteLine();
                 ColorConsole.WriteLine(Tab, $" {workItems.Key} ".White().OnDarkBlue());

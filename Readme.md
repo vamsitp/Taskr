@@ -1,13 +1,8 @@
-```bash
-# Add the Artifacts source to %appdata%\Nuget\NuGet.Config
-# dotnet nuget add source https://api.nuget.org/v3/index.json -n Nuget
+### **`taskr`**
+Tool (dotnet) to View **Azure DevOps** _Tasks'_ details by _States_ and other _Fields_
 
-# Install from AzDO Artifacts
-dotnet tool install -g --ignore-failed-sources taskr
+**`dotnet tool install -g --ignore-failed-sources taskr`**
 
-# Optional (For local debugging purposes): Install from local project path
-dotnet tool install -g --ignore-failed-sources --add-source ./bin taskr
+![Screenshot](https://github.com/vamsitp/Taskr/blob/master/Screenshot.png?raw=true)
 
-# Publish package to nuget.org (Optional)
-dotnet nuget push --source "Nuget" --api-key az "./bin/Taskr.1.0.0.nupkg"
-```
+> Type Index / Work-item ID / Search term 

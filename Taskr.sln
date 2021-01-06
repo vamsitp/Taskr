@@ -9,6 +9,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.gitignore = .gitignore
 		LICENSE = LICENSE
 		Readme.md = Readme.md
+		Screenshot.png = Screenshot.png
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Taskr", "Taskr\Taskr.csproj", "{E0696CB0-B011-4F75-907A-BAD90E18ED6D}"
