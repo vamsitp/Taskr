@@ -20,6 +20,7 @@
         private const string MediaType = "application/json";
         private const string AuthHeader = "Authorization";
         private const string BasicAuthHeaderPrefix = "Basic ";
+        private const string BearerAuthHeaderPrefix = "Bearer ";
         private const string WorkItemsTokenPath = ".workItems";
         private const string IdTokenPath = ".id";
         private const char WorkItemsDelimiter = ',';
@@ -30,7 +31,7 @@
 
         public static async Task<List<WorkItem>> GetWorkItems(Account account, string defaultWiql)
         {
-            var pat = GetBase64Token(account.Token);
+            var pat = account.IsPat ? GetBase64Token(account.Token) : (BearerAuthHeaderPrefix + account.Token);
             var workItemsList = new List<WorkItem>();
             try
             {
@@ -41,6 +42,7 @@
                 var postValue = new StringContent(JsonConvert.SerializeObject(wiql), Encoding.UTF8, MediaType);
                 var baseUrl = $"https://dev.azure.com/{account.Org}/{account.Project}/_apis/wit";
                 var result = await $"{baseUrl}/{WiqlUrl}"
+                    // .WithHeader("X-TFS-FedAuthRedirect", "Suppress")
                     .WithHeader(AuthHeader, pat)
                     .PostAsync(postValue)
                     .ReceiveJson<JObject>()

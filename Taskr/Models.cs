@@ -18,6 +18,9 @@
         public string Query { get; set; }
         public string Slicers { get; set; }
         public bool Enabled { get; set; }
+
+        [JsonIgnore]
+        public bool IsPat => this.Token.Length.Equals(52);
     }
 
     public class WorkItems

@@ -19,8 +19,9 @@
         private const string HorizontalChar = "─";
         private const string BorderChar = "└";
         private const string DefaultQuery = "SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '{0}' AND [System.WorkItemType] = 'Task' ORDER BY [System.Id] ASC";
-        private static AccountSettings Settings;
 
+        private static AccountSettings Settings;
+        private static string SettingsFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Taskr.json");
         private static Dictionary<string, ConsoleColor> StateColors = new Dictionary<string, ConsoleColor>
         {
             { "New", ConsoleColor.Red },
@@ -34,6 +35,16 @@
 
         static async Task Main(string[] args)
         {
+
+            try
+            {
+                // Console.SetWindowPosition(0, 0);
+                Console.SetWindowSize(Console.LargestWindowWidth - 10, Console.LargestWindowHeight - 10);
+            }
+            catch
+            {
+            }
+
             Settings = JsonConvert.DeserializeObject<AccountSettings>(GetSettings());
             while (true)
             {
@@ -62,15 +73,19 @@
 
         private static string GetSettings()
         {
-            var settingsFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Taskr.json");
-            if (!File.Exists(settingsFile))
+            if (!File.Exists(SettingsFile))
             {
-                var settings = JsonConvert.SerializeObject(new AccountSettings { Query = DefaultQuery, Slicers = "Tags,Priority", Accounts = new[] { new Account { Name = "Account-1", Org = "Org-1", Project = "Project-1", Token = "PAT Token for Org-1/Project-1", Enabled = true }, new Account { Name = "Account-2", Org = "Org-2", Project = "Project-2", Token = "PAT Token for Org-2/Project-2", Enabled = true } } }, Formatting.Indented);
-                File.WriteAllText(settingsFile, settings);
-                ColorConsole.WriteLine("Update settings here: ".Red(), settingsFile);
+                var settings = new AccountSettings { Query = DefaultQuery, Slicers = "Priority,Tags,IterationPath", Accounts = new[] { new Account { Name = "Account-1", Org = "Org-1", Project = "Project-1", Token = "PAT Token for Org-1/Project-1", Enabled = true }, new Account { Name = "Account-2", Org = "Org-2", Project = "Project-2", Token = "PAT Token for Org-2/Project-2", Enabled = true } } };
+                SetSettings(settings);
+                ColorConsole.WriteLine("Update settings here: ".Red(), SettingsFile);
             }
 
-            return File.ReadAllText(settingsFile);
+            return File.ReadAllText(SettingsFile);
+        }
+
+        private static void SetSettings(AccountSettings settings)
+        {
+            File.WriteAllText(SettingsFile, JsonConvert.SerializeObject(settings, new JsonSerializerSettings { Formatting = Formatting.Indented, NullValueHandling = NullValueHandling.Ignore }));
         }
 
         private static async IAsyncEnumerable<List<WorkItem>> GetTasks(int index)
@@ -80,6 +95,7 @@
             {
                 var account = Settings.Accounts[index - 1];
                 ColorConsole.WriteLine($" {account.Org} / {account.Project} ".Black().OnCyan());
+                await SetAuthTokenAsync(account);
                 yield return await AzDOService.GetWorkItems(account, defaultWiql).ConfigureAwait(false);
             }
             else
@@ -92,15 +108,28 @@
             }
         }
 
+        private static async Task SetAuthTokenAsync(Account account)
+        {
+            if (string.IsNullOrWhiteSpace(account.Token))
+            {
+                var tenant = await account.Org.GetTenantId();
+                account.Token = await AuthHelper.GetAuthTokenAsync(tenant);
+                // SetSettings(Settings);
+            }
+        }
+
         private static async Task Execute(int index)
         {
             var results = GetTasks(index);
             await foreach (var items in results)
             {
                 ColorConsole.WriteLine();
-                foreach (var slicer in Settings.Slicers.Split(new[] { ' ', ',', ';' }, StringSplitOptions.RemoveEmptyEntries))
+                var slicers = Settings.Slicers.Split(new[] { ' ', ',', ';' }, StringSplitOptions.RemoveEmptyEntries);
+                var headers = slicers.SelectMany(s => items.GroupBy(x => x.Fields.GetPropertyValue(s)).OrderBy(x => x.Key));
+                var padding = headers.Max(h => h.Key.ToString().Length) + Tab.Length;
+                foreach (var slicer in slicers)
                 {
-                    PrintSlicer(items, slicer);
+                    PrintSlicer(items, slicer, padding);
                     ColorConsole.WriteLine();
                 }
 
@@ -136,11 +165,10 @@
             }
         }
 
-        private static void PrintSlicer(List<WorkItem> items, string slicer)
+        private static void PrintSlicer(List<WorkItem> items, string slicer, int padding)
         {
             var headers = items.GroupBy(x => x.Fields.GetPropertyValue(slicer)).OrderBy(x => x.Key);
             var max = headers.Max(x => x.Count());
-            var padding = headers.Max(h => h.Key.ToString().Length) + Tab.Length;
             ColorConsole.WriteLine(Tab.PadLeft(padding + 1), $" {slicer.ToUpperInvariant()} ".Black().OnWhite());
             foreach (var workItems in headers)
             {

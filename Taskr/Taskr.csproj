@@ -18,7 +18,7 @@
     <RepositoryUrl>https://github.com/vamsitp/taskr</RepositoryUrl>
     <PackageTags>Azure DevOps;Tracking;DevOps;Tasks</PackageTags>
     <Company>Microsoft</Company>
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
     <StartupObject>Taskr.Program</StartupObject>
     <Deterministic>false</Deterministic>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
@@ -30,7 +30,12 @@
   <ItemGroup>
     <PackageReference Include="ColoredConsole" Version="1.0.0" />
     <PackageReference Include="Flurl.Http" Version="3.0.1" />
+    <PackageReference Include="Microsoft.Identity.Client" Version="4.24.0" />
+    <PackageReference Include="Microsoft.IdentityModel.Clients.ActiveDirectory" Version="5.2.8" />
     <PackageReference Include="Microsoft.Office.Interop.Excel" Version="15.0.4795.1000" />
+    <PackageReference Include="Microsoft.Toolkit.Wpf.UI.Controls.WebView" Version="6.1.2" />
+    <PackageReference Include="Microsoft.VisualStudio.Services.InteractiveClient" Version="16.153.0" />
+    <PackageReference Include="WindowsBase" Version="4.6.1055" />
   </ItemGroup>
 
 </Project>
