@@ -1,0 +1,36 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <NoWarn>NU1701;</NoWarn>
+    <LangVersion>preview</LangVersion>
+    <PackAsTool>true</PackAsTool>
+    <IsTool>true</IsTool>
+    <ToolCommandName>taskr</ToolCommandName>
+    <PackageOutputPath>./bin</PackageOutputPath>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Authors>Vamsi TP</Authors>
+    <Title>Taskr</Title>
+    <PackageDescription>dotnet tool to query/view AzDO Tasks' details/states</PackageDescription>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/vamsitp/taskr</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/vamsitp/taskr</RepositoryUrl>
+    <PackageTags>Azure DevOps;Tracking;DevOps;Tasks</PackageTags>
+    <Company>Microsoft</Company>
+    <Version>1.0.0</Version>
+    <StartupObject>Taskr.Program</StartupObject>
+    <Deterministic>false</Deterministic>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <!--<ApplicationIcon>logo.ico</ApplicationIcon>-->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ColoredConsole" Version="1.0.0" />
+    <PackageReference Include="Flurl.Http" Version="3.0.1" />
+    <PackageReference Include="Microsoft.Office.Interop.Excel" Version="15.0.4795.1000" />
+  </ItemGroup>
+
+</Project>

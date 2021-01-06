@@ -1,0 +1,20 @@
+{
+  "Query": "SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '{0}' AND [System.WorkItemType] = 'Task' ORDER BY [System.Id] ASC",
+  "Slicers": "Tags,Priority,IterationPath",
+  "Accounts": [
+    {
+      "Name": "Account-1",
+      "Org": "Org-1",
+      "Project": "Project-1",
+      "Token": "PAT Token for Org-1/Project-1",
+      "Enabled": true
+    },
+    {
+      "Name": "Account-2",
+      "Org": "Org-2",
+      "Project": "Project-2",
+      "Token": "PAT Token for Org-2/Project-2",
+      "Enabled": true
+    }
+  ]
+}
