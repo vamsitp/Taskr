@@ -7,6 +7,7 @@
     using System.Linq;
     using System.Text.RegularExpressions;
     using System.Threading.Tasks;
+    using System.Web;
 
     using ColoredConsole;
 
@@ -57,7 +58,14 @@
                 var input = Console.ReadLine();
                 if (int.TryParse(input, out var index))
                 {
-                    await Execute(index);
+                    try
+                    {
+                        await Execute(index);
+                    }
+                    catch (Exception ex)
+                    {
+                        ColorConsole.WriteLine(ex.Message.Red());
+                    }
                 }
                 else if (input.Equals("clear", StringComparison.OrdinalIgnoreCase) || input.Equals("cls", StringComparison.OrdinalIgnoreCase))
                 {
@@ -87,23 +95,13 @@
             File.WriteAllText(SettingsFile, JsonConvert.SerializeObject(settings, new JsonSerializerSettings { Formatting = Formatting.Indented, NullValueHandling = NullValueHandling.Ignore }));
         }
 
-        private static async IAsyncEnumerable<List<WorkItem>> GetTasks(int index)
+        private static async IAsyncEnumerable<List<WorkItem>> GetTasks(params Account[] accounts)
         {
             var defaultWiql = Settings.Query ?? DefaultQuery;
-            if (index > 0 && index <= Settings.Accounts.Count())
+            foreach (var account in accounts)
             {
-                var account = Settings.Accounts[index - 1];
                 ColorConsole.WriteLine($" {account.Org} / {account.Project} ".Black().OnCyan());
-                await SetAuthTokenAsync(account);
                 yield return await AzDOService.GetWorkItems(account, defaultWiql).ConfigureAwait(false);
-            }
-            else
-            {
-                foreach (var account in Settings.Accounts.Where(a => a.Enabled))
-                {
-                    ColorConsole.WriteLine($" {account.Org} / {account.Project} ".Black().OnCyan());
-                    yield return await AzDOService.GetWorkItems(account, defaultWiql).ConfigureAwait(false);
-                }
             }
         }
 
@@ -119,17 +117,21 @@
 
         private static async Task Execute(int index)
         {
-            var results = GetTasks(index);
+            var accounts = index > 0 && index <= Settings.Accounts.Count() ? new[] { Settings.Accounts[index - 1] } : Settings.Accounts.Where(a => a.Enabled).ToArray();
+            var results = GetTasks(accounts);
             await foreach (var items in results)
             {
                 ColorConsole.WriteLine();
-                var slicers = Settings.Slicers.Split(new[] { ' ', ',', ';' }, StringSplitOptions.RemoveEmptyEntries);
-                var headers = slicers.SelectMany(s => items.GroupBy(x => x.Fields.GetPropertyValue(s)).OrderBy(x => x.Key));
-                var padding = headers.Max(h => h.Key.ToString().Length) + Tab.Length;
-                foreach (var slicer in slicers)
+                var slicers = Settings.Slicers.Split(new[] { ' ', ',', ';' }, StringSplitOptions.RemoveEmptyEntries)?.ToList();
+                if (slicers?.Count > 0)
                 {
-                    PrintSlicer(items, slicer, padding);
-                    ColorConsole.WriteLine();
+                    var headers = slicers.SelectMany(s => items.GroupBy(x => x.Fields.GetPropertyValue(s)).OrderBy(x => x.Key));
+                    var padding = headers.Max(h => h.Key.ToString().Split('\\', 2).LastOrDefault().Length) + Tab.Length;
+                    foreach (var slicer in slicers)
+                    {
+                        PrintSlicer(items, slicer, padding);
+                        ColorConsole.WriteLine();
+                    }
                 }
 
                 Debug.WriteLine("input-1");
@@ -146,6 +148,10 @@
                 {
                     await Execute(index);
                     break;
+                }
+                else
+                {
+                    PrintWorkItems(input, items);
                 }
 
                 do
@@ -171,7 +177,7 @@
             ColorConsole.WriteLine(Tab.PadLeft(padding + 1), $" {slicer.ToUpperInvariant()} ".Black().OnWhite());
             foreach (var workItems in headers)
             {
-                ColorConsole.Write($" {workItems.Key} ".PadLeft(padding).Color(ConsoleColor.Blue), HorizontalChar, VerticalChar);
+                ColorConsole.Write($" {workItems.Key.ToString().Split('\\', 2).LastOrDefault()} ".PadLeft(padding).Color(ConsoleColor.Blue), HorizontalChar, VerticalChar);
                 var states = workItems.Select(x => x.Fields.State).OrderBy(s => s);
                 foreach (var state in states.GroupBy(x => x))
                 {
@@ -196,9 +202,9 @@
 
         private static void PrintAllWorkItems(List<WorkItem> items)
         {
-            var slicer = Settings.Slicers.Split(new[] { ' ', ',', ';' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+            var slicer = Settings.Slicers?.Split(new[] { ' ', ',', ';' }, StringSplitOptions.RemoveEmptyEntries)?.FirstOrDefault();
             ColorConsole.WriteLine($" {slicer} ".Black().OnWhite());
-            foreach (var workItems in items.GroupBy(x => x.Fields.GetPropertyValue(slicer)).OrderBy(x => x.Key))
+            foreach (var workItems in items.GroupBy(x => x.Fields.GetPropertyValue(slicer ?? nameof(x.Fields.Tags))).OrderBy(x => x.Key))
             {
                 ColorConsole.WriteLine();
                 ColorConsole.WriteLine(Tab, $" {workItems.Key} ".White().OnDarkBlue());
@@ -214,33 +220,40 @@
             if (int.TryParse(input, out var index))
             {
                 var workItem = items.SingleOrDefault(wi => wi.Id.Equals(index));
-                PrintWorkItemDetails(workItem, items);
+                PrintWorkItemDetails(workItem);
             }
             else
             {
-                var workItems = items.Where(item => item.Flatten().Any(x => x.Value.Contains(input, StringComparison.OrdinalIgnoreCase)))?.ToList();
-                foreach (var workItem in workItems)
+                var split = input.Split(new[] { ' ', ':' }, StringSplitOptions.RemoveEmptyEntries);
+                if (split.Length == 2 && split.Contains("open", StringComparer.OrdinalIgnoreCase))
                 {
-                    PrintWorkItemDetails(workItem, items);
-                    ColorConsole.WriteLine();
+                    var workItem = items.SingleOrDefault(item => item.Id.ToString().Equals(split.SingleOrDefault(s => !s.Equals("open", StringComparison.OrdinalIgnoreCase))));
+                    Process.Start(new ProcessStartInfo { FileName = workItem.Url.Replace("_apis/wit/workItems", "_workitems/edit"), UseShellExecute = true });
+                }
+                else
+                {
+                    var workItems = items.Where(item => item.Flatten().Any(x => x.Value.Contains(input, StringComparison.OrdinalIgnoreCase)))?.ToList();
+                    foreach (var workItem in workItems)
+                    {
+                        PrintWorkItemDetails(workItem);
+                        ColorConsole.WriteLine();
+                    }
                 }
             }
         }
 
-        private static void PrintWorkItemDetails(WorkItem workItem, List<WorkItem> items)
+        private static void PrintWorkItemDetails(WorkItem workItem)
         {
             if (workItem != null)
             {
                 const int Padding = 17;
                 ColorConsole.WriteLine(Tab, workItem.Fields.State.PadLeft(Padding).Color(StateColors[workItem.Fields.State]), ": ", (workItem.Id.ToString() + " - " + workItem.Fields.Title).Color(StateColors[workItem.Fields.State]));
-                ColorConsole.WriteLine(Tab, "Pillar".PadLeft(Padding).Blue(), ": ", workItem.Fields.Tags);
-                ColorConsole.WriteLine(Tab, nameof(workItem.Fields.AssignedTo).PadLeft(Padding).Blue(), ": ", workItem.Fields.AssignedTo?.DisplayName ?? (workItem.Fields.AssignedTo?.UniqueName ?? string.Empty));
-                ColorConsole.WriteLine(Tab, nameof(workItem.Fields.OriginalEstimate).PadLeft(Padding).Blue(), ": ", workItem.Fields.OriginalEstimate.ToString());
-                ColorConsole.WriteLine(Tab, nameof(workItem.Fields.CompletedWork).PadLeft(Padding).Blue(), ": ", workItem.Fields.CompletedWork.ToString());
-                ColorConsole.WriteLine(Tab, nameof(workItem.Fields.RemainingWork).PadLeft(Padding).Blue(), ": ", workItem.Fields.RemainingWork.ToString());
+                ColorConsole.WriteLine(Tab, string.Empty.PadLeft(Padding), "  ", $" P{workItem.Fields.Priority} / OE = {workItem.Fields.OriginalEstimate} / CW = {workItem.Fields.CompletedWork} / RW = {workItem.Fields.RemainingWork} ".Black().OnGray());
+                ColorConsole.WriteLine(Tab, nameof(workItem.Fields.Tags).PadLeft(Padding).Blue(), ": ", workItem.Fields.Tags);
+                ColorConsole.WriteLine(Tab, nameof(workItem.Fields.AssignedTo).PadLeft(Padding).Blue(), ": ", workItem.Fields.AssignedTo?.DisplayName ?? (workItem.Fields.AssignedTo?.UniqueName ?? "Unassigned".DarkYellow()));
                 ColorConsole.WriteLine(Tab, nameof(workItem.Fields.IterationPath).PadLeft(Padding).Blue(), ": ", workItem.Fields.IterationPath);
                 ColorConsole.WriteLine(Tab, nameof(workItem.Fields.AreaPath).PadLeft(Padding).Blue(), ": ", workItem.Fields.AreaPath);
-                ColorConsole.WriteLine(Tab, nameof(workItem.Fields.Description).PadLeft(Padding).Blue(), ": ", Regex.Replace(workItem.Fields.Description.Replace(Environment.NewLine, Environment.NewLine + Tab + Tab.PadLeft(Padding + 1)), "<.*?>", String.Empty));
+                ColorConsole.WriteLine(Tab, nameof(workItem.Fields.Description).PadLeft(Padding).Blue(), ": ", string.IsNullOrWhiteSpace(workItem.Fields.Description) ? string.Empty : HttpUtility.HtmlDecode(Regex.Replace(workItem.Fields.Description.Replace(Environment.NewLine, Environment.NewLine + Tab + Tab.PadLeft(Padding + 1)), "<.*?>", String.Empty)));
             }
         }
     }
