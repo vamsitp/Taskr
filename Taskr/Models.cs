@@ -46,6 +46,8 @@
 
     public class Fields
     {
+        private const string Unassigned = "Unassigned";
+
         [JsonProperty(PropertyName = "System.Title")]
         public string Title { get; set; }
 
@@ -71,7 +73,10 @@
         public short Priority { get; set; }
 
         [JsonProperty(PropertyName = "System.AssignedTo")]
-        public AssignedTo AssignedTo { get; set; }
+        public AssignedTo AssignedToObj { get; set; }
+
+        [JsonIgnore]
+        public string AssignedTo => this.AssignedToObj.DisplayName ?? (this.AssignedToObj.UniqueName ?? Unassigned);
 
         [JsonProperty(PropertyName = "Microsoft.VSTS.Scheduling.OriginalEstimate")]
         public float OriginalEstimate { get; set; }
