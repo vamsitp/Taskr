@@ -4,7 +4,14 @@ Tool (dotnet) to View **Azure DevOps** _Tasks'_ details by _States_ and other _F
 **`dotnet tool install -g --ignore-failed-sources taskr`**
 
 ![Screenshot](https://github.com/vamsitp/Taskr/blob/master/Screenshot.png?raw=true)
-> Type Index / Work-item ID / Search term 
+> Type: Index / Work-item ID / Search term / Field=Search-term   
+
+Examples:   
+> 1. `2` // Index of the Account to fetch the Work-items for   
+> 1. `5680` // ID of the Work-item to print the details for   
+> 1. `secure practices` // Phrase to filter the Work-items (searches across all _fields_)   
+> 1. `tags=security` // _field-name_ and _value_ to filter the Work-items (searches the specified _field_ for the provided _value_)   
+> 1. `open 5680` // Opens the Work-item (ID: 5680) in the default browser  
 
 ##### Settings: `%USERPROFILE%\Documents\Taskr.json`   
 (For relocated _Documents_ folder: `HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders`)

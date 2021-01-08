@@ -17,6 +17,7 @@
 
     public class Worker : BackgroundService
     {
+        private const int Padding = 17;
         private const string Tab = "    ";
         private const string VerticalChar = "│";
         private const string HorizontalChar = "─";
@@ -84,6 +85,9 @@
                 else if (key.Equals("c", StringComparison.OrdinalIgnoreCase) || key.Equals("cls", StringComparison.OrdinalIgnoreCase))
                 {
                     Console.Clear();
+#pragma warning disable S3626 // Jump statements should not be redundant
+                    continue;
+#pragma warning restore S3626 // Jump statements should not be redundant
                 }
                 else
                 {
@@ -104,7 +108,7 @@
 
         private void PrintAccounts()
         {
-            foreach (var item in this.settings.Accounts.Select((x, i) => (index: i, account: x)))
+            foreach (var item in this.settings.Accounts.Where(a => a.Enabled).Select((x, i) => (index: i, account: x)))
             {
                 ColorConsole.WriteLine($"{item.index + 1}".Cyan(), $" {(string.IsNullOrWhiteSpace(item.account.Name) ? item.account.Org + " / " + item.account.Project : item.account.Name)}");
             }
@@ -242,11 +246,12 @@
             if (int.TryParse(input, out var index))
             {
                 var workItem = workItems.SingleOrDefault(wi => wi.Id.Equals(index));
-                this.PrintWorkItemDetails(workItem);
+                this.PrintWorkItemDetails(workItem, 1);
+                ColorConsole.WriteLine();
             }
             else
             {
-                var split = input.Split(new[] { ' ', ':' }, StringSplitOptions.RemoveEmptyEntries);
+                var split = input.Split(new[] { ' ', ':', '=' }, 2);
                 if (split.Length == 2 && split.Contains("open", StringComparer.OrdinalIgnoreCase))
                 {
                     var workItem = workItems.SingleOrDefault(item => item.Id.ToString().Equals(split.SingleOrDefault(s => !s.Equals("open", StringComparison.OrdinalIgnoreCase))));
@@ -254,26 +259,32 @@
                 }
                 else
                 {
-                    var items = workItems.Where(item => item.Flatten().Any(x => x.Value.Contains(input, StringComparison.OrdinalIgnoreCase)))?.ToList();
+                    var items = workItems.Where(item => item.Flatten().Any(x => x.Key.Contains(split.FirstOrDefault(), StringComparison.OrdinalIgnoreCase) && x.Value.Contains(split.LastOrDefault(), StringComparison.OrdinalIgnoreCase)))?.ToList();
+                    if (items?.Count <= 0)
+                    {
+                        items = workItems.Where(item => item.Flatten().Any(x => x.Value.Contains(input, StringComparison.OrdinalIgnoreCase)))?.ToList();
+                    }
+
                     if (items?.Count > 0)
                     {
-                        foreach (var workItem in items)
+                        foreach (var workItem in items.Select((x, i) => (x, i: i + 1)))
                         {
-                            this.PrintWorkItemDetails(workItem);
-                            ColorConsole.WriteLine();
+                            this.PrintWorkItemDetails(workItem.x, workItem.i);
                         }
+
+                        ColorConsole.WriteLine();
                     }
                 }
             }
         }
 
-        private void PrintWorkItemDetails(WorkItem workItem)
+        private void PrintWorkItemDetails(WorkItem workItem, int index)
         {
             if (workItem != null)
             {
-                const int Padding = 17;
-                ColorConsole.WriteLine(Tab, workItem.Fields.State.PadLeft(Padding).Color(StateColors[workItem.Fields.State]), ": ", (workItem.Id.ToString() + " - " + workItem.Fields.Title).Color(StateColors[workItem.Fields.State]));
-                ColorConsole.WriteLine(Tab, string.Empty.PadLeft(Padding), "  ", $" P{workItem.Fields.Priority} / OE = {workItem.Fields.OriginalEstimate} / CW = {workItem.Fields.CompletedWork} / RW = {workItem.Fields.RemainingWork} ".Black().OnGray());
+                ColorConsole.WriteLine();
+                ColorConsole.WriteLine(Tab, $"{index}. ".PadLeft(Padding + 2), workItem.Id.ToString().Color(StateColors[workItem.Fields.State]), " - ", workItem.Fields.Title.Color(StateColors[workItem.Fields.State]));
+                ColorConsole.WriteLine(Tab, string.Empty.PadLeft(Padding), "  ", $" {workItem.Fields.State} / P{workItem.Fields.Priority} / OE = {workItem.Fields.OriginalEstimate} / CW = {workItem.Fields.CompletedWork} / RW = {workItem.Fields.RemainingWork} ".Black().OnGray());
                 ColorConsole.WriteLine(Tab, nameof(workItem.Fields.Tags).PadLeft(Padding).Blue(), ": ", workItem.Fields.Tags);
                 ColorConsole.WriteLine(Tab, nameof(workItem.Fields.AssignedTo).PadLeft(Padding).Blue(), ": ", workItem.Fields.AssignedTo);
                 ColorConsole.WriteLine(Tab, nameof(workItem.Fields.IterationPath).PadLeft(Padding).Blue(), ": ", workItem.Fields.IterationPath);

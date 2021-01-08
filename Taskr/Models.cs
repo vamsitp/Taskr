@@ -78,7 +78,7 @@ namespace Taskr
         public AssignedTo AssignedToObj { get; set; }
 
         [JsonIgnore]
-        public string AssignedTo => this.AssignedToObj.DisplayName ?? (this.AssignedToObj.UniqueName ?? Unassigned);
+        public string AssignedTo => this.AssignedToObj?.DisplayName ?? (this.AssignedToObj?.UniqueName ?? Unassigned);
 
         [JsonProperty(PropertyName = "Microsoft.VSTS.Scheduling.OriginalEstimate")]
         public float OriginalEstimate { get; set; }
