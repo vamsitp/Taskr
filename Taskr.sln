@@ -5,11 +5,15 @@ VisualStudioVersion = 16.0.30804.86
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{5D1FFC00-ADFD-4562-BBAB-4606D9E86C00}"
 	ProjectSection(SolutionItems) = preProject
+		Taskr\.editorconfig = Taskr\.editorconfig
 		.gitattributes = .gitattributes
 		.gitignore = .gitignore
+		.pre-commit-config.yaml = .pre-commit-config.yaml
 		LICENSE = LICENSE
+		pull_request_template.md = pull_request_template.md
 		Readme.md = Readme.md
 		Screenshot.png = Screenshot.png
+		Taskr\stylecop.json = Taskr\stylecop.json
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Taskr", "Taskr\Taskr.csproj", "{E0696CB0-B011-4F75-907A-BAD90E18ED6D}"
