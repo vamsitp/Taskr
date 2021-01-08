@@ -10,12 +10,12 @@
 
     public static class Extensions
     {
-        private static HttpClient Client = new HttpClient(new HttpClientHandler() { AllowAutoRedirect = false });
+        private static readonly HttpClient Client = new HttpClient(new HttpClientHandler() { AllowAutoRedirect = false });
 
         public static Dictionary<string, string> Flatten(this object item)
         {
             var jsonObject = JObject.FromObject(item);
-            var tokens = jsonObject.Descendants().Where(p => p.Count() == 0);
+            var tokens = jsonObject.Descendants().Where(p => !p.Any());
             var results = tokens.Aggregate(new Dictionary<string, string>(), (props, token) =>
             {
                 props.Add(token.Path, token.ToString());
@@ -39,7 +39,7 @@
         {
             var url = $"https://dev.azure.com/{azDoOrg}";
             var httpResponseMessage = await Client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
-            var redirectedUrl = httpResponseMessage.Headers.WwwAuthenticate.ToList().FirstOrDefault(i => i.Parameter.StartsWith("authorization_uri")).Parameter.Split('=', 2).LastOrDefault().Split('/').LastOrDefault();
+            var redirectedUrl = httpResponseMessage.Headers.WwwAuthenticate.AsEnumerable().FirstOrDefault(i => i.Parameter.StartsWith("authorization_uri")).Parameter.Split('=', 2).LastOrDefault().Split('/').LastOrDefault();
             return redirectedUrl;
         }
     }
