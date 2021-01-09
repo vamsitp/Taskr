@@ -35,16 +35,17 @@
         };
 
         private readonly ILogger<Worker> logger;
-
+        private readonly IHostApplicationLifetime appLifetime;
         private AccountSettings settings = null;
 
         private string continuationkey = null;
 
-        public Worker(IOptionsMonitor<AccountSettings> settingsMonitor, ILogger<Worker> logger)
+        public Worker(IOptionsMonitor<AccountSettings> settingsMonitor, ILogger<Worker> logger, IHostApplicationLifetime appLifetime)
         {
             this.settings = settingsMonitor.CurrentValue;
             settingsMonitor.OnChange(changedSettings => { this.settings = changedSettings; });
             this.logger = logger;
+            this.appLifetime = appLifetime;
         }
 
         protected async override Task ExecuteAsync(CancellationToken stoppingToken)
@@ -55,6 +56,7 @@
 
         private async Task ProcessAsync(CancellationToken stopToken)
         {
+            this.PrintHelp();
             while (!stopToken.IsCancellationRequested)
             {
                 this.PrintAccounts();
@@ -104,6 +106,24 @@
                     }
                 }
             }
+
+            Environment.ExitCode = 0;
+            this.appLifetime.StopApplication();
+        }
+
+        private void PrintHelp()
+        {
+            ColorConsole.WriteLine("\n", "USAGE", ":".Cyan());
+            ColorConsole.WriteLine("-------------------------------------------------------".Cyan());
+            ColorConsole.WriteLine("> ".Cyan(), "2", " // Index of the Account to fetch the Work-items for".DarkGreen());
+            ColorConsole.WriteLine("> ".Cyan(), "<ENTER>", " // Display all Work-items for the Account".DarkGreen());
+            ColorConsole.WriteLine("> ".Cyan(), "5680", " // ID of the Work-item to print the details for".DarkGreen());
+            ColorConsole.WriteLine("> ".Cyan(), "secure practices", " // Phrase to filter the Work-items (searches across all 'fields')".DarkGreen());
+            ColorConsole.WriteLine("> ".Cyan(), "tags=security", " // 'field-name' and 'value' to filter the Work-items (searches the specified 'field' for the provided 'value')".DarkGreen());
+            ColorConsole.WriteLine("> ".Cyan(), "open 5680", " // Opens the Work-item (ID: 5680) in the default browser".DarkGreen());
+            ColorConsole.WriteLine("> ".Cyan(), "cls", " // Clears the console".DarkGreen());
+            ColorConsole.WriteLine("> ".Cyan(), "quit", " // Quits the app".DarkGreen());
+            ColorConsole.WriteLine("-------------------------------------------------------".Cyan(), "\n");
         }
 
         private void PrintAccounts()

@@ -20,7 +20,7 @@
     <RepositoryUrl>https://github.com/vamsitp/taskr</RepositoryUrl>
     <PackageTags>Azure DevOps;Tracking;DevOps;Tasks</PackageTags>
     <Company>Microsoft</Company>
-    <Version>1.0.9</Version>
+    <Version>1.0.11</Version>
     <StartupObject>Taskr.Program</StartupObject>
     <Deterministic>false</Deterministic>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
