@@ -6,6 +6,7 @@
     using System.Linq;
     using System.Net.Http;
     using System.Text;
+    using System.Threading;
     using System.Threading.Tasks;
 
     using ColoredConsole;
@@ -29,7 +30,7 @@
         private const string WiqlUrl = "wiql?api-version=6.0";
         private const string WorkItemsUrl = "workitems?ids={0}&fields=System.Id,System.WorkItemType,System.Title,System.Description,System.Tags,System.State,System.AssignedTo,System.IterationPath,System.AreaPath,Microsoft.VSTS.Common.Priority,Microsoft.VSTS.Scheduling.OriginalEstimate,Microsoft.VSTS.Scheduling.CompletedWork,Microsoft.VSTS.Scheduling.RemainingWork&api-version=6.0";
 
-        public async Task<List<WorkItem>> GetWorkItems(Account account, string defaultWiql)
+        public async Task<List<WorkItem>> GetWorkItems(Account account, string defaultWiql, CancellationToken cancellationToken)
         {
             var pat = account.IsPat ? this.GetBase64Token(account.Token) : (BearerAuthHeaderPrefix + account.Token);
             var workItemsList = new List<WorkItem>();
@@ -43,7 +44,7 @@
                 var baseUrl = $"https://dev.azure.com/{account.Org}/{account.Project}/_apis/wit";
                 var result = await $"{baseUrl}/{WiqlUrl}" // .WithHeader("X-TFS-FedAuthRedirect", "Suppress")
                     .WithHeader(AuthHeader, pat)
-                    .PostAsync(postValue)
+                    .PostAsync(postValue, cancellationToken)
                     .ReceiveJson<JObject>()
                     .ConfigureAwait(false);
 
@@ -59,7 +60,7 @@
 
                     var workItems = await string.Format(CultureInfo.InvariantCulture, $"{baseUrl}/{WorkItemsUrl}", joinedIds.Trim(WorkItemsDelimiter))
                         .WithHeader(AuthHeader, pat)
-                        .GetJsonAsync<WorkItems>()
+                        .GetJsonAsync<WorkItems>(cancellationToken)
                         .ConfigureAwait(false);
                     workItemsList = workItems?.Items?.ToList();
                 }

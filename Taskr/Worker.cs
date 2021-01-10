@@ -4,6 +4,7 @@
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Linq;
+    using System.Runtime.CompilerServices;
     using System.Text.RegularExpressions;
     using System.Threading;
     using System.Threading.Tasks;
@@ -14,6 +15,10 @@
     using Microsoft.Extensions.Hosting;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
+
+    using NuGet.Common;
+    using NuGet.Protocol;
+    using NuGet.Protocol.Core.Types;
 
     public class Worker : BackgroundService
     {
@@ -50,14 +55,18 @@
 
         protected async override Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            // logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
+            if (this.settings.CheckUpdates)
+            {
+                await this.CheckForUpdates(stoppingToken);
+            }
+
             await this.ProcessAsync(stoppingToken);
         }
 
-        private async Task ProcessAsync(CancellationToken stopToken)
+        private async Task ProcessAsync(CancellationToken stoppingToken)
         {
             this.PrintHelp();
-            while (!stopToken.IsCancellationRequested)
+            while (!stoppingToken.IsCancellationRequested)
             {
                 this.PrintAccounts();
 
@@ -76,20 +85,25 @@
                     continue;
                 }
 
-                if (key.Equals("q", StringComparison.OrdinalIgnoreCase) || key.Equals("quit", StringComparison.OrdinalIgnoreCase))
+                if (key.EqualsIgnoreCase("q") || key.EqualsIgnoreCase("quit"))
                 {
                     break;
                 }
-                else if (key.Equals("?"))
+                else if (key.Equals("?") || key.EqualsIgnoreCase("help"))
                 {
-                    this.PrintAccounts();
+                    this.PrintHelp();
                 }
-                else if (key.Equals("c", StringComparison.OrdinalIgnoreCase) || key.Equals("cls", StringComparison.OrdinalIgnoreCase))
+                else if (key.EqualsIgnoreCase("c") || key.EqualsIgnoreCase("cls"))
                 {
                     Console.Clear();
 #pragma warning disable S3626 // Jump statements should not be redundant
                     continue;
 #pragma warning restore S3626 // Jump statements should not be redundant
+                }
+                else if (key.Equals("+") || key.EqualsIgnoreCase("update"))
+                {
+                    await this.UpdateTool(stoppingToken);
+                    break;
                 }
                 else
                 {
@@ -97,7 +111,7 @@
                     {
                         try
                         {
-                            await this.Execute(index);
+                            await this.Execute(index, stoppingToken);
                         }
                         catch (Exception ex)
                         {
@@ -111,9 +125,44 @@
             this.appLifetime.StopApplication();
         }
 
+        private async Task UpdateTool(CancellationToken cancellationToken)
+        {
+            if (await this.CheckForUpdates(cancellationToken))
+            {
+                Parallel.ForEach(
+                    new[]
+                    {
+                        (cmd: "cmd", args: $"/c \"dotnet tool update -g --no-cache --ignore-failed-sources {nameof(Taskr).ToLowerInvariant()}\" & {nameof(Taskr).ToLowerInvariant()}", hide: false),
+                        (cmd: "taskkill", args: $"/im {nameof(Taskr).ToLowerInvariant()}.exe /f", hide: true),
+                    },
+                    task => Process.Start(new ProcessStartInfo { FileName = task.cmd, Arguments = task.args, CreateNoWindow = task.hide, UseShellExecute = !task.hide }));
+            }
+        }
+
+        private async Task<bool> CheckForUpdates(CancellationToken cancellationToken)
+        {
+            ColorConsole.WriteLine("\nChecking for updates", "...".Cyan());
+            var update = false;
+            var repository = Repository.Factory.GetCoreV3("https://api.nuget.org/v3/index.json");
+            var resource = await repository.GetResourceAsync<FindPackageByIdResource>();
+            var version = (await resource.GetAllVersionsAsync(nameof(Taskr), new SourceCacheContext(), NullLogger.Instance, cancellationToken)).OrderByDescending(v => v.Version).FirstOrDefault();
+            if (version.Version > this.settings.Version)
+            {
+                ColorConsole.WriteLine($"Upgrade available: ", $"{version}".Cyan());
+                update = true;
+            }
+            else
+            {
+                ColorConsole.WriteLine($"You are on the latest version: ", $"{version}".Cyan());
+            }
+
+            ColorConsole.WriteLine("-------------------------------------------------------".Cyan());
+            return update;
+        }
+
         private void PrintHelp()
         {
-            ColorConsole.WriteLine("\n", "USAGE", ":".Cyan());
+            ColorConsole.WriteLine("USAGE (", $"{this.settings.Version}".Cyan(), ")", ":".Cyan());
             ColorConsole.WriteLine("-------------------------------------------------------".Cyan());
             ColorConsole.WriteLine("> ".Cyan(), "2", " // Index of the Account to fetch the Work-items for".DarkGreen());
             ColorConsole.WriteLine("> ".Cyan(), "<ENTER>", " // Display all Work-items for the Account".DarkGreen());
@@ -123,25 +172,28 @@
             ColorConsole.WriteLine("> ".Cyan(), "open 5680", " // Opens the Work-item (ID: 5680) in the default browser".DarkGreen());
             ColorConsole.WriteLine("> ".Cyan(), "cls", " // Clears the console".DarkGreen());
             ColorConsole.WriteLine("> ".Cyan(), "quit", " // Quits the app".DarkGreen());
-            ColorConsole.WriteLine("-------------------------------------------------------".Cyan(), "\n");
+            ColorConsole.WriteLine("> ".Cyan(), "+", " // Updates Taskr to latest version".DarkGreen());
+            ColorConsole.WriteLine("> ".Cyan(), "?", " // Print Help".DarkGreen());
+            ColorConsole.WriteLine("-------------------------------------------------------".Cyan());
         }
 
         private void PrintAccounts()
         {
+            ColorConsole.WriteLine();
             foreach (var item in this.settings.Accounts.Where(a => a.Enabled).Select((x, i) => (index: i, account: x)))
             {
                 ColorConsole.WriteLine($"{item.index + 1}".Cyan(), $" {(string.IsNullOrWhiteSpace(item.account.Name) ? item.account.Org + " / " + item.account.Project : item.account.Name)}");
             }
         }
 
-        private async IAsyncEnumerable<(Account account, List<WorkItem> workItems)> GetTasks(params Account[] accounts)
+        private async IAsyncEnumerable<(Account account, List<WorkItem> workItems)> GetTasks([EnumeratorCancellation] CancellationToken cancellationToken, params Account[] accounts)
         {
             var defaultWiql = this.settings.Query ?? Program.DefaultQuery;
             foreach (var account in accounts)
             {
                 ColorConsole.WriteLine($" {account.Org} / {account.Project} ".Black().OnCyan());
                 await this.SetAuthTokenAsync(account);
-                yield return (account, workItems: await new AzDOService().GetWorkItems(account, defaultWiql).ConfigureAwait(false));
+                yield return (account, workItems: await new AzDOService().GetWorkItems(account, defaultWiql, cancellationToken).ConfigureAwait(false));
             }
         }
 
@@ -154,10 +206,10 @@
             }
         }
 
-        private async Task Execute(int index)
+        private async Task Execute(int index, CancellationToken cancellationToken)
         {
             var accounts = index > 0 && index <= this.settings.Accounts.Count() ? new[] { this.settings.Accounts[index - 1] } : this.settings.Accounts.Where(a => a.Enabled).ToArray();
-            var results = this.GetTasks(accounts);
+            var results = this.GetTasks(cancellationToken, accounts);
             await foreach (var items in results)
             {
                 var account = items.account;
@@ -188,7 +240,7 @@
                     }
                     else if (int.TryParse(input, out index)) // Fetch details for the Account based on the numeric index provided
                     {
-                        await this.Execute(index);
+                        await this.Execute(index, cancellationToken);
                         break;
                     }
                     else

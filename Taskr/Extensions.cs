@@ -35,6 +35,16 @@
             return item?.IndexOf(subString, StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
+        public static bool ContainsIgnoreCase(this IEnumerable<string> items, string subString)
+        {
+            return items?.Contains(subString, StringComparer.OrdinalIgnoreCase) == true;
+        }
+
+        public static bool EqualsIgnoreCase(this string item1, string item2)
+        {
+            return item1?.Equals(item2, StringComparison.OrdinalIgnoreCase) == true;
+        }
+
         public static async Task<string> GetTenantId(this string azDoOrg)
         {
             var url = $"https://dev.azure.com/{azDoOrg}";

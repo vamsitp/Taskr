@@ -2,13 +2,20 @@
 
 namespace Taskr
 {
+    using System;
+    using System.Reflection;
+
     using Newtonsoft.Json;
 
     public class AccountSettings
     {
+        public bool CheckUpdates { get; set; }
         public string Query { get; set; }
         public string Slicers { get; set; }
         public Account[] Accounts { get; set; }
+
+        [JsonIgnore]
+        public Version Version => Assembly.GetEntryAssembly().GetName().Version;
     }
 
     public class Account

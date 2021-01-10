@@ -1,5 +1,6 @@
 // %USERPROFILE%\Documents\Taskr.json
 {
+  "CheckUpdates": false,
   "Query": "SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '{0}' AND [System.WorkItemType] = 'Task' ORDER BY [System.Id] ASC",
   "Slicers": "Tags,Priority,IterationPath",
   "Accounts": [
