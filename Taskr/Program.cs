@@ -16,7 +16,6 @@
 
     internal static class Program
     {
-        internal const string DefaultQuery = "SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '{0}' AND [System.WorkItemType] = 'Task' ORDER BY [System.Id] ASC";
         private static readonly string SettingsFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Taskr.json");
 
         private static async Task Main(string[] args)
@@ -52,7 +51,9 @@
                     services
                         .Configure<AccountSettings>(configuration)
                         .AddHostedService<Worker>()
-                        .AddSingleton<JsonSerializer>();
+                        .AddSingleton<JsonSerializer>()
+                        .AddTransient<IBacklogService, AzDoService>()
+                        .AddTransient<IBacklogService, JiraService>();
                 })
                 .ConfigureLogging((hostContext, logging) =>
                 {
@@ -76,7 +77,7 @@
         {
             if (!File.Exists(SettingsFile))
             {
-                var settings = new AccountSettings { Query = DefaultQuery, Slicers = "Tags,Priority,IterationPath", Accounts = new[] { new Account { Name = "Account-1", Org = "Org-1", Project = "Project-1", Token = "PAT Token for Org-1/Project-1", Enabled = true }, new Account { Name = "Account-2", Org = "Org-2", Project = "Project-2", Token = "PAT Token for Org-2/Project-2", Enabled = true } } };
+                var settings = new AccountSettings { Query = AzDoService.DefaultQuery, Slicers = "Tags,Priority,IterationPath", Accounts = new[] { new Account { Name = "Account-1", Org = "Org-1", Project = "Project-1", Token = "PAT Token for Org-1/Project-1", Enabled = true }, new Account { Name = "Account-2", Type = AccountType.Jira, Org = "Org-2", Project = "Project-2", Token = "API Token for Org-2/Project-2", Query = JiraService.DefaultQuery, Enabled = true } } };
                 SetSettings(settings);
                 ColorConsole.WriteLine("Update settings here: ".Red(), SettingsFile);
             }

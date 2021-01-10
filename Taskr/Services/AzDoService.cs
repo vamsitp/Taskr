@@ -13,11 +13,15 @@
 
     using Flurl.Http;
 
+    using Microsoft.Extensions.Options;
+
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
 
-    public class AzDOService
+    public class AzDoService : IBacklogService
     {
+        internal const string DefaultQuery = "SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '{0}' AND [System.WorkItemType] = 'Task' ORDER BY [System.Id] ASC";
+
         private const string MediaType = "application/json";
         private const string AuthHeader = "Authorization";
         private const string BasicAuthHeaderPrefix = "Basic ";
@@ -30,15 +34,26 @@
         private const string WiqlUrl = "wiql?api-version=6.0";
         private const string WorkItemsUrl = "workitems?ids={0}&fields=System.Id,System.WorkItemType,System.Title,System.Description,System.Tags,System.State,System.AssignedTo,System.IterationPath,System.AreaPath,Microsoft.VSTS.Common.Priority,Microsoft.VSTS.Scheduling.OriginalEstimate,Microsoft.VSTS.Scheduling.CompletedWork,Microsoft.VSTS.Scheduling.RemainingWork&api-version=6.0";
 
-        public async Task<List<WorkItem>> GetWorkItems(Account account, string defaultWiql, CancellationToken cancellationToken)
+        private AccountSettings settings;
+
+        public AzDoService(IOptionsMonitor<AccountSettings> settingsMonitor)
+        {
+            this.settings = settingsMonitor.CurrentValue;
+            settingsMonitor.OnChange(changedSettings => { this.settings = changedSettings; });
+        }
+
+        public AccountType AccountType => AccountType.AzDo;
+
+        public async Task<List<WorkItem>> GetWorkItems(Account account, CancellationToken cancellationToken)
         {
             var pat = account.IsPat ? this.GetBase64Token(account.Token) : (BearerAuthHeaderPrefix + account.Token);
             var workItemsList = new List<WorkItem>();
             try
             {
+                var defaultQuery = string.IsNullOrWhiteSpace(this.settings.Query) ? DefaultQuery : this.settings.Query;
                 var wiql = new
                 {
-                    query = string.Format(CultureInfo.InvariantCulture, string.IsNullOrWhiteSpace(account.Query) ? defaultWiql : account.Query, account.Project),
+                    query = string.Format(CultureInfo.InvariantCulture, string.IsNullOrWhiteSpace(account.Query) ? defaultQuery : account.Query, account.Project),
                 };
                 var postValue = new StringContent(JsonConvert.SerializeObject(wiql), Encoding.UTF8, MediaType);
                 var baseUrl = $"https://dev.azure.com/{account.Org}/{account.Project}/_apis/wit";

@@ -17,6 +17,15 @@
       "Project": "Project-2",
       "Token": "PAT Token for Org-2/Project-2",
       "Enabled": true
+    },
+    {
+      "Name": "Account-3",
+      "Type": "Jira",
+      "Org": "Org-3",
+      "Project": "Project-3",
+      "Token": "user@email.com:apiToken", // https://id.atlassian.com/manage-profile/security/api-tokens
+      "Query": "project%3D${0}", // JQL query
+      "Enabled": false
     }
   ]
 }

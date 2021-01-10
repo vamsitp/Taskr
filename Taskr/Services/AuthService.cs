@@ -11,7 +11,7 @@
 
     // https://docs.microsoft.com/en-us/azure/devops/integrate/get-started/authentication/authentication-guidance?view=azure-devops
     // https://github.com/microsoft/azure-devops-auth-samples/blob/master/ManagedClientConsoleAppSample/Program.cs
-    public static class AuthHelper
+    public static class AuthService
     {
         internal const string AzureDevOpsResourceId = "499b84ac-1321-427f-aa17-267ca6975798"; // Constant value to target Azure DevOps. Do not change
 

@@ -129,3 +129,6 @@ dotnet_diagnostic.S125.severity = none
 
 # SA1108: Block statements should not contain embedded comments
 dotnet_diagnostic.SA1108.severity = none
+
+# S1135: Track uses of "TODO" tags
+dotnet_diagnostic.S1135.severity = none

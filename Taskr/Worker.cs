@@ -12,6 +12,7 @@
 
     using ColoredConsole;
 
+    using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Hosting;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
@@ -41,15 +42,17 @@
 
         private readonly ILogger<Worker> logger;
         private readonly IHostApplicationLifetime appLifetime;
+        private readonly IServiceProvider services;
         private AccountSettings settings = null;
 
         private string continuationkey = null;
 
-        public Worker(IOptionsMonitor<AccountSettings> settingsMonitor, ILogger<Worker> logger, IHostApplicationLifetime appLifetime)
+        public Worker(IOptionsMonitor<AccountSettings> settingsMonitor, ILogger<Worker> logger, IServiceProvider services, IHostApplicationLifetime appLifetime)
         {
             this.settings = settingsMonitor.CurrentValue;
             settingsMonitor.OnChange(changedSettings => { this.settings = changedSettings; });
             this.logger = logger;
+            this.services = services;
             this.appLifetime = appLifetime;
         }
 
@@ -188,21 +191,20 @@
 
         private async IAsyncEnumerable<(Account account, List<WorkItem> workItems)> GetTasks([EnumeratorCancellation] CancellationToken cancellationToken, params Account[] accounts)
         {
-            var defaultWiql = this.settings.Query ?? Program.DefaultQuery;
             foreach (var account in accounts)
             {
                 ColorConsole.WriteLine($" {account.Org} / {account.Project} ".Black().OnCyan());
                 await this.SetAuthTokenAsync(account);
-                yield return (account, workItems: await new AzDOService().GetWorkItems(account, defaultWiql, cancellationToken).ConfigureAwait(false));
+                yield return (account, workItems: await this.services.GetServices<IBacklogService>().SingleOrDefault(x => x.AccountType.Equals(account.Type)).GetWorkItems(account, cancellationToken).ConfigureAwait(false));
             }
         }
 
         private async Task SetAuthTokenAsync(Account account)
         {
-            if (string.IsNullOrWhiteSpace(account.Token))
+            if (account.Type.Equals(AccountType.AzDo) && string.IsNullOrWhiteSpace(account.Token))
             {
                 var tenant = await account.Org.GetTenantId();
-                account.Token = await AuthHelper.GetAuthTokenAsync(tenant); // SetSettings(Settings);
+                account.Token = await AuthService.GetAuthTokenAsync(tenant); // SetSettings(Settings);
             }
         }
 
