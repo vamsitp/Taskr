@@ -167,6 +167,9 @@ namespace Taskr
         public object resolutiondate { get; set; }
         public int workratio { get; set; }
         public DateTime created { get; set; }
+
+        [JsonProperty("customfield_10020")]
+        public JiraSprint[] iterations { get; set; }
         public JiraPriority priority { get; set; }
         public object[] labels { get; set; }
         public object timeestimate { get; set; }
@@ -262,4 +265,22 @@ namespace Taskr
         public int progress { get; set; }
         public int total { get; set; }
     }
+
+
+    public class Rootobject
+    {
+        
+    }
+
+    public class JiraSprint
+    {
+        public int id { get; set; }
+        public string name { get; set; }
+        public string state { get; set; }
+        public int boardId { get; set; }
+        public string goal { get; set; }
+        public DateTime startDate { get; set; }
+        public DateTime endDate { get; set; }
+    }
+
 }

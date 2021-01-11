@@ -17,7 +17,7 @@
 
     public class JiraService : IBacklogService
     {
-        internal const string DefaultQuery = "project={0}";
+        internal const string DefaultQuery = "project={0} AND issuetype=Subtask";
 
         private const string MediaType = "application/json";
         private const string AuthHeader = "Authorization";
@@ -39,9 +39,10 @@
             try
             {
                 var pat = this.GetBase64Token(account.Token);
-                var defaultQuery = string.IsNullOrWhiteSpace(this.settings.Query) ? DefaultQuery : this.settings.Query;
-                var query = HttpUtility.UrlEncode(string.Format(CultureInfo.InvariantCulture, string.IsNullOrWhiteSpace(account.Query) ? defaultQuery : account.Query, account.Project));
-                var baseUrl = $"https://{account.Org}.atlassian.net/rest/api/3/search?jql={query}";
+
+                // var defaultQuery = string.IsNullOrWhiteSpace(this.settings.Query) ? DefaultQuery : this.settings.Query; //  The default query could be related to AzDO
+                var query = HttpUtility.UrlEncode(string.Format(CultureInfo.InvariantCulture, string.IsNullOrWhiteSpace(account.Query) ? DefaultQuery : account.Query, account.Project));
+                var baseUrl = $"https://{account.Org}.atlassian.net/rest/api/3/search?jql={query}&fields=id,summary,description,status,priority,labels,assignee,issuetype,customfield_10020&maxResults={Extensions.MaxSize}";
                 var result = await baseUrl
                     .WithHeader(AuthHeader, pat)
                     .WithHeader("Accept", MediaType)
@@ -57,6 +58,8 @@
                         Title = x.fields.summary,
                         Description = x.fields.description?.ToString() ?? string.Empty,
                         State = x.fields.status?.name,
+                        Priority = short.Parse(x.fields.priority?.id ?? "0"),
+                        IterationPath = x.fields.iterations?.FirstOrDefault()?.name,
                         Tags = string.Join(",", x.fields.labels),
                         AssignedToObj = new AssignedTo { DisplayName = x.fields.assignee?.displayName, UniqueName = x.fields.assignee?.emailAddress },
                     },

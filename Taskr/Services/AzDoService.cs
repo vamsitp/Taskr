@@ -67,17 +67,23 @@
                 if (response != null)
                 {
                     var ids = response.Select(x => x.SelectToken(IdTokenPath).Value<int>());
-                    var joinedIds = string.Join(WorkItemsDelimiter, ids);
-                    if (string.IsNullOrWhiteSpace(joinedIds))
+                    var chunkedIds = ids.ChunkBy();
+                    foreach (var cids in chunkedIds)
                     {
-                        return null;
-                    }
+                        var joinedIds = string.Join(WorkItemsDelimiter, cids);
+                        if (!string.IsNullOrWhiteSpace(joinedIds))
+                        {
+                            var workItems = await string.Format(CultureInfo.InvariantCulture, $"{baseUrl}/{WorkItemsUrl}", joinedIds.Trim(WorkItemsDelimiter))
+                               .WithHeader(AuthHeader, pat)
+                               .GetJsonAsync<WorkItems>(cancellationToken)
+                               .ConfigureAwait(false);
 
-                    var workItems = await string.Format(CultureInfo.InvariantCulture, $"{baseUrl}/{WorkItemsUrl}", joinedIds.Trim(WorkItemsDelimiter))
-                        .WithHeader(AuthHeader, pat)
-                        .GetJsonAsync<WorkItems>(cancellationToken)
-                        .ConfigureAwait(false);
-                    workItemsList = workItems?.Items?.ToList();
+                            if (workItems?.Items?.Length > 0)
+                            {
+                                workItemsList.AddRange(workItems.Items);
+                            }
+                        }
+                    }
                 }
             }
             catch (Exception ex)

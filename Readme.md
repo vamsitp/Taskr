@@ -1,6 +1,6 @@
 ### **`taskr`**
-Tool (dotnet) to View **Azure DevOps** _Tasks'_ details by _States_ and other _Fields_
-> <font color=red>_pre-req</font>: install [`dotnet core 3.1 runtime`](https://dotnet.microsoft.com/download/dotnet-core/thank-you/runtime-3.1.10-windows-x64-installer) / [sdk](https://download.visualstudio.microsoft.com/download/pr/3366b2e6-ed46-48ae-bf7b-f5804f6ee4c9/186f681ff967b509c6c9ad31d3d343da/dotnet-sdk-3.1.404-win-x64.exe) (if not already installed)_   
+Tool (dotnet) to View **Azure DevOps** (or **Jira**) _Tasks'_ details by _States_ and other _Fields_
+> **_Pre-req_**: Install [`dotnet core 3.1 runtime`](https://dotnet.microsoft.com/download/dotnet-core/thank-you/runtime-3.1.10-windows-x64-installer) / [sdk](https://download.visualstudio.microsoft.com/download/pr/3366b2e6-ed46-48ae-bf7b-f5804f6ee4c9/186f681ff967b509c6c9ad31d3d343da/dotnet-sdk-3.1.404-win-x64.exe) (if not already installed)_   
 **`dotnet tool install -g --ignore-failed-sources taskr`**   
 > \> **`taskr`**
 
@@ -39,10 +39,11 @@ Examples:
     },
     {
       "Name": "Account-2",
+      "Type": "Jira", // For Jira projects
       "Org": "Org-2",
       "Project": "Project-2",
-      "Token": "PAT Token for Org-2/Project-2",
-      "Query": "SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '{0}' AND [System.WorkItemType] = 'Task' AND [System.AreaPath] UNDER 'My Project Team' ORDER BY [System.Id] ASC", // Override
+      "Token": "user@email.com:apiToken", // Basic-auth format
+      "Query": "project={0} AND type=Subtask", // JQL query override
       "Enabled": true
     }
   ]

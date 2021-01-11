@@ -10,6 +10,7 @@
 
     public static class Extensions
     {
+        internal const int MaxSize = 200;
         private static readonly HttpClient Client = new HttpClient(new HttpClientHandler() { AllowAutoRedirect = false });
 
         public static Dictionary<string, string> Flatten(this object item)
@@ -43,6 +44,15 @@
         public static bool EqualsIgnoreCase(this string item1, string item2)
         {
             return item1?.Equals(item2, StringComparison.OrdinalIgnoreCase) == true;
+        }
+
+        public static List<List<T>> ChunkBy<T>(this IEnumerable<T> source, int chunkSize = MaxSize)
+        {
+            return source
+            .Select((x, i) => new { Index = i, Value = x })
+            .GroupBy(x => x.Index / chunkSize)
+            .Select(x => x.Select(v => v.Value).ToList())
+            .ToList();
         }
 
         public static async Task<string> GetTenantId(this string azDoOrg)

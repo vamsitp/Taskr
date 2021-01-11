@@ -77,7 +77,7 @@
         {
             if (!File.Exists(SettingsFile))
             {
-                var settings = new AccountSettings { Query = AzDoService.DefaultQuery, Slicers = "Tags,Priority,IterationPath", Accounts = new[] { new Account { Name = "Account-1", Org = "Org-1", Project = "Project-1", Token = "PAT Token for Org-1/Project-1", Enabled = true }, new Account { Name = "Account-2", Type = AccountType.Jira, Org = "Org-2", Project = "Project-2", Token = "API Token for Org-2/Project-2", Query = JiraService.DefaultQuery, Enabled = true } } };
+                var settings = new AccountSettings { Query = AzDoService.DefaultQuery, Slicers = "Tags,Priority,IterationPath", Accounts = new[] { new Account { Name = "Account-1", Org = "Org-1", Project = "Project-1", Token = "PAT Token for Org-1/Project-1", Enabled = true }, new Account { Name = "Account-2", Type = AccountType.Jira, Org = "Org-2", Project = "Project-2", Token = "user@email.com:apiToken", Query = JiraService.DefaultQuery, Enabled = true } } };
                 SetSettings(settings);
                 ColorConsole.WriteLine("Update settings here: ".Red(), SettingsFile);
             }

@@ -24,7 +24,7 @@
       "Org": "Org-3",
       "Project": "Project-3",
       "Token": "user@email.com:apiToken", // https://id.atlassian.com/manage-profile/security/api-tokens
-      "Query": "project%3D${0}", // JQL query
+      "Query": "project={0} AND type=Subtask", // JQL query override
       "Enabled": false
     }
   ]

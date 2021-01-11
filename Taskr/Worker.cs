@@ -99,14 +99,10 @@
                 else if (key.EqualsIgnoreCase("c") || key.EqualsIgnoreCase("cls"))
                 {
                     Console.Clear();
-#pragma warning disable S3626 // Jump statements should not be redundant
-                    continue;
-#pragma warning restore S3626 // Jump statements should not be redundant
                 }
                 else if (key.Equals("+") || key.EqualsIgnoreCase("update"))
                 {
                     await this.UpdateTool(stoppingToken);
-                    break;
                 }
                 else
                 {
@@ -128,9 +124,10 @@
             this.appLifetime.StopApplication();
         }
 
-        private async Task UpdateTool(CancellationToken cancellationToken)
+        private async Task<bool> UpdateTool(CancellationToken cancellationToken)
         {
-            if (await this.CheckForUpdates(cancellationToken))
+            var check = await this.CheckForUpdates(cancellationToken);
+            if (check)
             {
                 Parallel.ForEach(
                     new[]
@@ -140,6 +137,8 @@
                     },
                     task => Process.Start(new ProcessStartInfo { FileName = task.cmd, Arguments = task.args, CreateNoWindow = task.hide, UseShellExecute = !task.hide }));
             }
+
+            return check;
         }
 
         private async Task<bool> CheckForUpdates(CancellationToken cancellationToken)
@@ -151,7 +150,7 @@
             var version = (await resource.GetAllVersionsAsync(nameof(Taskr), new SourceCacheContext(), NullLogger.Instance, cancellationToken)).OrderByDescending(v => v.Version).FirstOrDefault();
             if (version.Version > this.settings.Version)
             {
-                ColorConsole.WriteLine($"Upgrade available: ", $"{version}".Cyan());
+                ColorConsole.WriteLine($"Update available: ", $"{version}".Cyan());
                 update = true;
             }
             else
