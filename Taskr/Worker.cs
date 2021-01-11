@@ -357,7 +357,7 @@
             {
                 ColorConsole.WriteLine();
                 ColorConsole.WriteLine(Tab, $"{index}. ".PadLeft(Padding + 2), workItem.Id.ToString().Color(StateColors[workItem.Fields.State]), " - ", workItem.Fields.Title.Color(StateColors[workItem.Fields.State]));
-                ColorConsole.WriteLine(Tab, string.Empty.PadLeft(Padding), "  ", $" {workItem.Fields.State} / P{workItem.Fields.Priority} / OE = {workItem.Fields.OriginalEstimate} / CW = {workItem.Fields.CompletedWork} / RW = {workItem.Fields.RemainingWork} ".Black().OnGray());
+                ColorConsole.WriteLine(Tab, string.Empty.PadLeft(Padding), "  ", $" P{workItem.Fields.Priority} / OE = {workItem.Fields.OriginalEstimate} / CW = {workItem.Fields.CompletedWork} / RW = {workItem.Fields.RemainingWork} / {workItem.Fields.State} ({workItem.Fields.Reason}) ".Black().OnGray());
                 ColorConsole.WriteLine(Tab, nameof(workItem.Fields.Tags).PadLeft(Padding).Blue(), ": ", workItem.Fields.Tags);
                 ColorConsole.WriteLine(Tab, nameof(workItem.Fields.AssignedTo).PadLeft(Padding).Blue(), ": ", workItem.Fields.AssignedTo);
                 ColorConsole.WriteLine(Tab, nameof(workItem.Fields.IterationPath).PadLeft(Padding).Blue(), ": ", workItem.Fields.IterationPath);

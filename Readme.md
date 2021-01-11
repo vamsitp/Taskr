@@ -1,6 +1,6 @@
 ### **`taskr`**
 Tool (dotnet) to View **Azure DevOps** (or **Jira**) _Tasks'_ details by _States_ and other _Fields_
-> **_Pre-req_**: Install [`dotnet core 3.1 runtime`](https://dotnet.microsoft.com/download/dotnet-core/thank-you/runtime-3.1.10-windows-x64-installer) / [sdk](https://download.visualstudio.microsoft.com/download/pr/3366b2e6-ed46-48ae-bf7b-f5804f6ee4c9/186f681ff967b509c6c9ad31d3d343da/dotnet-sdk-3.1.404-win-x64.exe) (if not already installed)_   
+> _**Pre-req**: Install [`dotnet core 3.1 runtime`](https://dotnet.microsoft.com/download/dotnet-core/thank-you/runtime-3.1.10-windows-x64-installer) / [sdk](https://download.visualstudio.microsoft.com/download/pr/3366b2e6-ed46-48ae-bf7b-f5804f6ee4c9/186f681ff967b509c6c9ad31d3d343da/dotnet-sdk-3.1.404-win-x64.exe) (if not already installed)_   
 **`dotnet tool install -g --ignore-failed-sources taskr`**   
 > \> **`taskr`**
 

@@ -41,22 +41,22 @@ namespace Taskr
 
     public class WorkItems
     {
-        [JsonProperty(PropertyName = "count")]
+        [JsonProperty("count")]
         public int Count { get; set; }
 
-        [JsonProperty(PropertyName = "value")]
+        [JsonProperty("value")]
         public WorkItem[] Items { get; set; }
     }
 
     public class WorkItem
     {
-        [JsonProperty(PropertyName = "id")]
+        [JsonProperty("id")]
         public int Id { get; set; }
 
-        [JsonProperty(PropertyName = "fields")]
+        [JsonProperty("fields")]
         public Fields Fields { get; set; }
 
-        [JsonProperty(PropertyName = "url")]
+        [JsonProperty("url")]
         public string Url { get; set; }
     }
 
@@ -64,76 +64,79 @@ namespace Taskr
     {
         private const string Unassigned = "Unassigned";
 
-        [JsonProperty(PropertyName = "System.Title")]
+        [JsonProperty("System.Title")]
         public string Title { get; set; }
 
-        [JsonProperty(PropertyName = "System.Description")]
+        [JsonProperty("System.Description")]
         public string Description { get; set; }
 
-        [JsonProperty(PropertyName = "System.WorkItemType")]
+        [JsonProperty("System.WorkItemType")]
         public string WorkItemType { get; set; }
 
-        [JsonProperty(PropertyName = "System.State")]
+        [JsonProperty("System.State")]
         public string State { get; set; }
 
-        [JsonProperty(PropertyName = "System.Tags")]
+        [JsonProperty("System.Reason")]
+        public string Reason { get; set; }
+
+        [JsonProperty("System.Tags")]
         public string Tags { get; set; }
 
-        [JsonProperty(PropertyName = "System.AreaPath")]
+        [JsonProperty("System.AreaPath")]
         public string AreaPath { get; set; }
 
-        [JsonProperty(PropertyName = "System.IterationPath")]
+        [JsonProperty("System.IterationPath")]
         public string IterationPath { get; set; }
 
-        [JsonProperty(PropertyName = "Microsoft.VSTS.Common.Priority")]
+        [JsonProperty("Microsoft.VSTS.Common.Priority")]
         public short Priority { get; set; }
 
-        [JsonProperty(PropertyName = "System.AssignedTo")]
+        [JsonProperty("System.AssignedTo")]
         public AssignedTo AssignedToObj { get; set; }
 
         [JsonIgnore]
         public string AssignedTo => this.AssignedToObj?.DisplayName ?? (this.AssignedToObj?.UniqueName ?? Unassigned);
 
-        [JsonProperty(PropertyName = "Microsoft.VSTS.Scheduling.OriginalEstimate")]
+        [JsonProperty("Microsoft.VSTS.Scheduling.OriginalEstimate")]
         public float OriginalEstimate { get; set; }
 
-        [JsonProperty(PropertyName = "Microsoft.VSTS.Scheduling.CompletedWork")]
+        [JsonProperty("Microsoft.VSTS.Scheduling.CompletedWork")]
         public float CompletedWork { get; set; }
 
-        [JsonProperty(PropertyName = "Microsoft.VSTS.Scheduling.RemainingWork")]
+        [JsonProperty("Microsoft.VSTS.Scheduling.RemainingWork")]
         public float RemainingWork { get; set; }
     }
 
     public class AssignedTo
     {
-        [JsonProperty(PropertyName = "displayName")]
+        [JsonProperty("displayName")]
         public string DisplayName { get; set; }
 
-        [JsonProperty(PropertyName = "uniqueName")]
+        [JsonProperty("uniqueName")]
         public string UniqueName { get; set; }
     }
 
     public class AzDOException
     {
-        [JsonProperty(PropertyName = "id")]
+        [JsonProperty("id")]
         public string Id { get; set; }
 
-        [JsonProperty(PropertyName = "innerException")]
+        [JsonProperty("innerException")]
         public object InnerException { get; set; }
 
-        [JsonProperty(PropertyName = "message")]
+        [JsonProperty("message")]
         public string Message { get; set; }
 
-        [JsonProperty(PropertyName = "typeName")]
+        [JsonProperty("typeName")]
         public string TypeName { get; set; }
 
-        [JsonProperty(PropertyName = "typeKey")]
+        [JsonProperty("typeKey")]
         public string TypeKey { get; set; }
 
-        [JsonProperty(PropertyName = "errorCode")]
+        [JsonProperty("errorCode")]
         public int ErrorCode { get; set; }
 
-        [JsonProperty(PropertyName = "eventId")]
+        [JsonProperty("eventId")]
         public int EventId { get; set; }
     }
 

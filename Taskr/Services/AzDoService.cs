@@ -32,7 +32,7 @@
         private const char Colon = ':';
 
         private const string WiqlUrl = "wiql?api-version=6.0";
-        private const string WorkItemsUrl = "workitems?ids={0}&fields=System.Id,System.WorkItemType,System.Title,System.Description,System.Tags,System.State,System.AssignedTo,System.IterationPath,System.AreaPath,Microsoft.VSTS.Common.Priority,Microsoft.VSTS.Scheduling.OriginalEstimate,Microsoft.VSTS.Scheduling.CompletedWork,Microsoft.VSTS.Scheduling.RemainingWork&api-version=6.0";
+        private const string WorkItemsUrl = "workitems?ids={0}&fields=System.Id,System.WorkItemType,System.Title,System.Description,System.Tags,System.State,System.Reason,System.AssignedTo,System.IterationPath,System.AreaPath,Microsoft.VSTS.Common.Priority,Microsoft.VSTS.Scheduling.OriginalEstimate,Microsoft.VSTS.Scheduling.CompletedWork,Microsoft.VSTS.Scheduling.RemainingWork&api-version=6.0";
 
         private AccountSettings settings;
 
