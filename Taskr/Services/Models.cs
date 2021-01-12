@@ -3,9 +3,21 @@
 namespace Taskr
 {
     using System;
+    using System.Collections.Generic;
     using System.Reflection;
 
     using Newtonsoft.Json;
+
+    internal enum FlowStep
+    {
+        Accounts,        
+        Details
+    }
+
+    public class AccountsData
+    {
+        public Dictionary<Account, List<WorkItem>> Items { get; set; }
+    }
 
     public enum AccountType
     {

@@ -46,6 +46,11 @@
             return item1?.Equals(item2, StringComparison.OrdinalIgnoreCase) == true;
         }
 
+        public static bool StartsWithIgnoreCase(this string item1, string item2)
+        {
+            return item1?.StartsWith(item2, StringComparison.OrdinalIgnoreCase) == true;
+        }
+
         public static List<List<T>> ChunkBy<T>(this IEnumerable<T> source, int chunkSize = MaxSize)
         {
             return source

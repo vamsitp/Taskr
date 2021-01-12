@@ -1,15 +1,17 @@
 ### **`taskr`**
 Tool (dotnet) to View **Azure DevOps** (or **Jira**) _Tasks'_ details by _States_ and other _Fields_
-> _**Pre-req**: Install [`dotnet core 3.1 runtime`](https://dotnet.microsoft.com/download/dotnet-core/thank-you/runtime-3.1.10-windows-x64-installer) / [sdk](https://download.visualstudio.microsoft.com/download/pr/3366b2e6-ed46-48ae-bf7b-f5804f6ee4c9/186f681ff967b509c6c9ad31d3d343da/dotnet-sdk-3.1.404-win-x64.exe) (if not already installed)_   
+> _**Pre-req**: Install [`dotnet core 3.1`](https://download.visualstudio.microsoft.com/download/pr/3366b2e6-ed46-48ae-bf7b-f5804f6ee4c9/186f681ff967b509c6c9ad31d3d343da/dotnet-sdk-3.1.404-win-x64.exe) (if not already installed)_   
 **`dotnet tool install -g --ignore-failed-sources taskr`**   
 > \> **`taskr`**
 
 ![Screenshot](https://github.com/vamsitp/Taskr/blob/master/Screenshot.png?raw=true)
-> Type: Index / Work-item ID / Search term / Field=Search-term   
+> **Type**: `Index` / `Work-item ID` / `Search term` / `Field`: `Search-term`   
+> **Tab out**: For auto-completion   
 
 Examples:   
+> \> `field:<TAB>` // For Auto-completion  
 > \> `2` // Index of the Account to fetch the Work-items for   
-> \> `ENTER` // Display all Work-items for the Account   
+> \> `<ENTER>` // Display all Work-items for the Account   
 > \> `5680` // ID of the Work-item to print the details for   
 > \> `secure practices` // Phrase to filter the Work-items (searches across all _fields_)   
 > \> `tags=security` // _field-name_ and _value_ to filter the Work-items (searches the specified _field_ for the provided _value_)   

@@ -42,9 +42,9 @@
 
         private readonly ILogger<Worker> logger;
         private readonly IHostApplicationLifetime appLifetime;
+        private readonly AutoCompletionHandler autoCompletionHandler;
         private readonly IServiceProvider services;
         private AccountSettings settings = null;
-
         private string continuationkey = null;
 
         public Worker(IOptionsMonitor<AccountSettings> settingsMonitor, ILogger<Worker> logger, IServiceProvider services, IHostApplicationLifetime appLifetime)
@@ -54,7 +54,14 @@
             this.logger = logger;
             this.services = services;
             this.appLifetime = appLifetime;
+            this.autoCompletionHandler = new AutoCompletionHandler(this);
         }
+
+        internal int Index { get; set; }
+
+        internal FlowStep FlowStep { get; set; }
+
+        internal AccountsData AccountsData { get; set; }
 
         protected async override Task ExecuteAsync(CancellationToken stoppingToken)
         {
@@ -63,6 +70,8 @@
                 await this.CheckForUpdates(stoppingToken);
             }
 
+            this.AccountsData = new AccountsData { Items = this.settings.Accounts.Where(a => a.Enabled).ToDictionary(x => x, x => new List<WorkItem>()) };
+            ReadLine.AutoCompletionHandler = this.autoCompletionHandler;
             await this.ProcessAsync(stoppingToken);
         }
 
@@ -80,7 +89,8 @@
                 if (string.IsNullOrWhiteSpace(key))
                 {
                     ColorConsole.Write("> ".Cyan());
-                    key = Console.ReadLine()?.Trim();
+                    this.FlowStep = FlowStep.Accounts;
+                    key = ReadLine.Read()?.Trim();
                 }
 
                 if (string.IsNullOrWhiteSpace(key))
@@ -110,6 +120,11 @@
                     {
                         try
                         {
+                            if (index > 0 && index <= this.settings.Accounts.Count())
+                            {
+                                this.Index = index;
+                            }
+
                             await this.Execute(index, stoppingToken);
                         }
                         catch (Exception ex)
@@ -166,6 +181,7 @@
         {
             ColorConsole.WriteLine("USAGE (", $"{this.settings.Version}".Cyan(), ")", ":".Cyan());
             ColorConsole.WriteLine("-------------------------------------------------------".Cyan());
+            ColorConsole.WriteLine("> ".Cyan(), "field:<TAB>", " // For Auto-completion".DarkGreen());
             ColorConsole.WriteLine("> ".Cyan(), "2", " // Index of the Account to fetch the Work-items for".DarkGreen());
             ColorConsole.WriteLine("> ".Cyan(), "<ENTER>", " // Display all Work-items for the Account".DarkGreen());
             ColorConsole.WriteLine("> ".Cyan(), "5680", " // ID of the Work-item to print the details for".DarkGreen());
@@ -214,7 +230,11 @@
             await foreach (var items in results)
             {
                 var account = items.account;
-                var workItems = items.workItems;
+                var workItems = items.workItems ?? new List<WorkItem>();
+                var existing = this.AccountsData.Items.SingleOrDefault(a => a.Key.Name?.Equals(account.Name) == true || (a.Key.Org.Equals(account.Org) && a.Key.Project.Equals(account.Project)));
+                existing.Value.Clear();
+                existing.Value.AddRange(workItems);
+
                 ColorConsole.WriteLine();
                 if (workItems?.Count > 0)
                 {
@@ -231,7 +251,8 @@
                     }
 
                     ColorConsole.Write("> ".Blue());
-                    var input = Console.ReadLine();
+                    this.FlowStep = FlowStep.Details;
+                    var input = ReadLine.Read();
 
                     // Proceed with all Work-item details if the input is blank
                     if (string.IsNullOrWhiteSpace(input))
@@ -252,7 +273,7 @@
                     do
                     {
                         ColorConsole.Write("> ".Blue());
-                        input = Console.ReadLine();
+                        input = ReadLine.Read();
 
                         // Fetch details for the Work-item based on the text provided
                         if (!string.IsNullOrWhiteSpace(input))
@@ -324,7 +345,7 @@
             }
             else
             {
-                var split = input.Split(new[] { ' ', ':', '=' }, 2);
+                var split = input.Split(this.autoCompletionHandler.Separators, 2)?.Select(x => x.Trim()).ToArray();
                 if (split.Length == 2 && split.Contains("open", StringComparer.OrdinalIgnoreCase))
                 {
                     var workItem = workItems.SingleOrDefault(item => item.Id.ToString().Equals(split.SingleOrDefault(s => !s.Equals("open", StringComparison.OrdinalIgnoreCase))));
