@@ -5,12 +5,15 @@ namespace Taskr
     using System;
     using System.Collections.Generic;
     using System.Reflection;
+    using System.Text.RegularExpressions;
+    using System.Web;
 
     using Newtonsoft.Json;
 
     internal enum FlowStep
     {
-        Accounts,        
+        Accounts,
+        Slicers,
         Details
     }
 
@@ -80,7 +83,10 @@ namespace Taskr
         public string Title { get; set; }
 
         [JsonProperty("System.Description")]
-        public string Description { get; set; }
+        public string DescriptionHtml { get; set; }
+
+        [JsonIgnore]
+        public string Description => string.IsNullOrWhiteSpace(this.DescriptionHtml) ? string.Empty : HttpUtility.HtmlDecode(Regex.Replace(this.DescriptionHtml.Replace(Environment.NewLine, Environment.NewLine + Worker.Tab + Worker.Tab.PadLeft(Worker.Padding + 1)), "<.*?>", string.Empty));
 
         [JsonProperty("System.WorkItemType")]
         public string WorkItemType { get; set; }

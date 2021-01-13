@@ -14,13 +14,13 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Authors>Vamsi TP</Authors>
     <Title>Taskr</Title>
-    <PackageDescription>dotnet tool to query/view AzDO Tasks' details/states</PackageDescription>
+    <PackageDescription>dotnet tool to query/view AzDO (or Jira) Tasks' details/states</PackageDescription>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/vamsitp/taskr</PackageProjectUrl>
     <RepositoryUrl>https://github.com/vamsitp/taskr</RepositoryUrl>
     <PackageTags>Azure DevOps;Tracking;DevOps;Tasks</PackageTags>
     <Company>Microsoft</Company>
-    <Version>1.1.1</Version>
+    <Version>1.1.2</Version>
     <StartupObject>Taskr.Program</StartupObject>
     <Deterministic>false</Deterministic>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>

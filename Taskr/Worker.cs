@@ -5,10 +5,8 @@
     using System.Diagnostics;
     using System.Linq;
     using System.Runtime.CompilerServices;
-    using System.Text.RegularExpressions;
     using System.Threading;
     using System.Threading.Tasks;
-    using System.Web;
 
     using ColoredConsole;
 
@@ -23,8 +21,9 @@
 
     public class Worker : BackgroundService
     {
-        private const int Padding = 17;
-        private const string Tab = "    ";
+        internal const int Padding = 17;
+        internal const string Tab = "    ";
+
         private const string VerticalChar = "│";
         private const string HorizontalChar = "─";
         private const string BorderChar = "└";
@@ -45,7 +44,6 @@
         private readonly AutoCompletionHandler autoCompletionHandler;
         private readonly IServiceProvider services;
         private AccountSettings settings = null;
-        private string continuationkey = null;
 
         public Worker(IOptionsMonitor<AccountSettings> settingsMonitor, ILogger<Worker> logger, IServiceProvider services, IHostApplicationLifetime appLifetime)
         {
@@ -70,8 +68,10 @@
                 await this.CheckForUpdates(stoppingToken);
             }
 
-            this.AccountsData = new AccountsData { Items = this.settings.Accounts.Where(a => a.Enabled).ToDictionary(x => x, x => new List<WorkItem>()) };
+            ReadLine.HistoryEnabled = true;
             ReadLine.AutoCompletionHandler = this.autoCompletionHandler;
+
+            this.AccountsData = new AccountsData { Items = this.settings.Accounts.Where(a => a.Enabled).ToDictionary(x => x, x => new List<WorkItem>()) };
             await this.ProcessAsync(stoppingToken);
         }
 
@@ -80,63 +80,111 @@
             this.PrintHelp();
             while (!stoppingToken.IsCancellationRequested)
             {
-                this.PrintAccounts();
-
-                // If key was typed during Continue...
-                var key = this.continuationkey;
-                this.continuationkey = null;
-
-                if (string.IsNullOrWhiteSpace(key))
+                try
                 {
-                    ColorConsole.Write("> ".Cyan());
-                    this.FlowStep = FlowStep.Accounts;
-                    key = ReadLine.Read()?.Trim();
-                }
-
-                if (string.IsNullOrWhiteSpace(key))
-                {
-                    continue;
-                }
-
-                if (key.EqualsIgnoreCase("q") || key.EqualsIgnoreCase("quit"))
-                {
-                    break;
-                }
-                else if (key.Equals("?") || key.EqualsIgnoreCase("help"))
-                {
-                    this.PrintHelp();
-                }
-                else if (key.EqualsIgnoreCase("c") || key.EqualsIgnoreCase("cls"))
-                {
-                    Console.Clear();
-                }
-                else if (key.Equals("+") || key.EqualsIgnoreCase("update"))
-                {
-                    await this.UpdateTool(stoppingToken);
-                }
-                else
-                {
-                    if (int.TryParse(key, out var index))
+                    if (this.FlowStep == FlowStep.Accounts)
                     {
-                        try
+                        this.PrintAccounts();
+                    }
+
+                    ColorConsole.Write("> ".Color(this.FlowStep == FlowStep.Accounts ? ConsoleColor.Cyan : ConsoleColor.Blue));
+                    var key = ReadLine.Read()?.Trim(new[] { '\0', ' ', '\t' });
+
+                    // Proceed with all Work-item details if the input is blank
+                    if (string.IsNullOrWhiteSpace(key))
+                    {
+                        if (this.FlowStep == FlowStep.Slicers)
+                        {
+                            var currentAccount = this.AccountsData.Items.ElementAt(this.Index - 1);
+                            this.PrintAllWorkItems(currentAccount.Key, currentAccount.Value);
+                            ColorConsole.WriteLine();
+                        }
+                        else
+                        {
+                            this.FlowStep = FlowStep.Accounts;
+                        }
+                    }
+                    else if (key.EqualsIgnoreCase("q") || key.EqualsIgnoreCase("quit"))
+                    {
+                        break;
+                    }
+                    else if (key.Equals("?") || key.EqualsIgnoreCase("help"))
+                    {
+                        this.PrintHelp();
+                    }
+                    else if (key.EqualsIgnoreCase("c") || key.EqualsIgnoreCase("cls"))
+                    {
+                        Console.Clear();
+                    }
+                    else if (key.Equals("+") || key.EqualsIgnoreCase("update"))
+                    {
+                        await this.UpdateTool(stoppingToken);
+                    }
+                    else
+                    {
+                        if (int.TryParse(key, out var index))
                         {
                             if (index > 0 && index <= this.settings.Accounts.Count())
                             {
                                 this.Index = index;
+                                await this.Execute(index, stoppingToken); // Fetch details for the Account based on the numeric index provided
                             }
-
-                            await this.Execute(index, stoppingToken);
+                            else
+                            {
+                                if (this.Index > 0)
+                                {
+                                    var currentAccount = this.AccountsData.Items.ElementAt(this.Index - 1);
+                                    var workItem = currentAccount.Value.SingleOrDefault(wi => wi.Id.Equals(index));
+                                    if (this.PrintWorkItemDetails(workItem, 1))
+                                    {
+                                        ColorConsole.WriteLine();
+                                    }
+                                }
+                            }
                         }
-                        catch (Exception ex)
+                        else
                         {
-                            ColorConsole.WriteLine(ex.Message.Red());
+                            if (this.Index > 0)
+                            {
+                                var currentAccount = this.AccountsData.Items.ElementAt(this.Index - 1);
+                                this.PrintWorkItems(key, currentAccount.Value);
+                            }
                         }
                     }
+                }
+                catch (Exception ex)
+                {
+                    ColorConsole.WriteLine(ex.Message.Red());
                 }
             }
 
             Environment.ExitCode = 0;
             this.appLifetime.StopApplication();
+        }
+
+        private async Task Execute(int index, CancellationToken cancellationToken)
+        {
+            var accounts = index > 0 && index <= this.settings.Accounts.Count() ? new[] { this.settings.Accounts[index - 1] } : this.settings.Accounts.Where(a => a.Enabled).ToArray();
+            var results = this.GetTasks(cancellationToken, accounts);
+            await foreach (var items in results)
+            {
+                var account = items.account;
+                var workItems = items.workItems ?? new List<WorkItem>();
+                var existing = this.AccountsData.Items.SingleOrDefault(a => a.Key.Name?.Equals(account.Name) == true || (a.Key.Org.Equals(account.Org) && a.Key.Project.Equals(account.Project)));
+                existing.Value.Clear();
+                existing.Value.AddRange(workItems);
+
+                ColorConsole.WriteLine();
+                this.FlowStep = FlowStep.Slicers;
+                if (workItems?.Count > 0)
+                {
+                    this.PrintSlicers(account, workItems);
+                }
+                else
+                {
+                    ColorConsole.WriteLine("No Work-items found for the given Query!".DarkYellow());
+                }
+            }
         }
 
         private async Task<bool> UpdateTool(CancellationToken cancellationToken)
@@ -198,6 +246,7 @@
         private void PrintAccounts()
         {
             ColorConsole.WriteLine();
+            this.FlowStep = FlowStep.Accounts;
             foreach (var item in this.settings.Accounts.Where(a => a.Enabled).Select((x, i) => (index: i, account: x)))
             {
                 ColorConsole.WriteLine($"{item.index + 1}".Cyan(), $" {(string.IsNullOrWhiteSpace(item.account.Name) ? item.account.Org + " / " + item.account.Project : item.account.Name)}");
@@ -223,69 +272,17 @@
             }
         }
 
-        private async Task Execute(int index, CancellationToken cancellationToken)
+        private void PrintSlicers(Account account, List<WorkItem> workItems)
         {
-            var accounts = index > 0 && index <= this.settings.Accounts.Count() ? new[] { this.settings.Accounts[index - 1] } : this.settings.Accounts.Where(a => a.Enabled).ToArray();
-            var results = this.GetTasks(cancellationToken, accounts);
-            await foreach (var items in results)
+            var slicers = (string.IsNullOrWhiteSpace(account.Slicers) ? this.settings.Slicers : account.Slicers).Split(new[] { ' ', ',', ';' }, StringSplitOptions.RemoveEmptyEntries)?.ToList();
+            if (slicers?.Count > 0)
             {
-                var account = items.account;
-                var workItems = items.workItems ?? new List<WorkItem>();
-                var existing = this.AccountsData.Items.SingleOrDefault(a => a.Key.Name?.Equals(account.Name) == true || (a.Key.Org.Equals(account.Org) && a.Key.Project.Equals(account.Project)));
-                existing.Value.Clear();
-                existing.Value.AddRange(workItems);
-
-                ColorConsole.WriteLine();
-                if (workItems?.Count > 0)
+                var headers = slicers.SelectMany(s => workItems.GroupBy(x => x.Fields.GetPropertyValue(s)).OrderBy(x => x.Key));
+                var padding = headers.Max(h => h.Key?.ToString()?.Replace($"{account.Project}\\", string.Empty)?.Length ?? 0) + Tab.Length;
+                foreach (var slicer in slicers)
                 {
-                    var slicers = (string.IsNullOrWhiteSpace(account.Slicers) ? this.settings.Slicers : account.Slicers).Split(new[] { ' ', ',', ';' }, StringSplitOptions.RemoveEmptyEntries)?.ToList();
-                    if (slicers?.Count > 0)
-                    {
-                        var headers = slicers.SelectMany(s => workItems.GroupBy(x => x.Fields.GetPropertyValue(s)).OrderBy(x => x.Key));
-                        var padding = headers.Max(h => h.Key?.ToString()?.Replace($"{account.Project}\\", string.Empty)?.Length ?? 0) + Tab.Length;
-                        foreach (var slicer in slicers)
-                        {
-                            this.PrintSlicer(account, workItems, slicer, padding);
-                            ColorConsole.WriteLine();
-                        }
-                    }
-
-                    ColorConsole.Write("> ".Blue());
-                    this.FlowStep = FlowStep.Details;
-                    var input = ReadLine.Read();
-
-                    // Proceed with all Work-item details if the input is blank
-                    if (string.IsNullOrWhiteSpace(input))
-                    {
-                        this.PrintAllWorkItems(account, workItems);
-                        ColorConsole.WriteLine();
-                    }
-                    else if (int.TryParse(input, out index)) // Fetch details for the Account based on the numeric index provided
-                    {
-                        await this.Execute(index, cancellationToken);
-                        break;
-                    }
-                    else
-                    {
-                        this.PrintWorkItems(input, workItems);
-                    }
-
-                    do
-                    {
-                        ColorConsole.Write("> ".Blue());
-                        input = ReadLine.Read();
-
-                        // Fetch details for the Work-item based on the text provided
-                        if (!string.IsNullOrWhiteSpace(input))
-                        {
-                            this.PrintWorkItems(input, workItems);
-                        }
-                    }
-                    while (!string.IsNullOrWhiteSpace(input));
-                }
-                else
-                {
-                    ColorConsole.WriteLine("No Work-items found for the given Query!".DarkYellow());
+                    this.PrintSlicer(account, workItems, slicer, padding);
+                    ColorConsole.WriteLine();
                 }
             }
         }
@@ -322,6 +319,7 @@
 
         private void PrintAllWorkItems(Account account, List<WorkItem> workItems)
         {
+            this.FlowStep = FlowStep.Details;
             var slicer = (string.IsNullOrWhiteSpace(account.Slicers) ? this.settings.Slicers : account.Slicers).Split(new[] { ' ', ',', ';' }, StringSplitOptions.RemoveEmptyEntries)?.FirstOrDefault();
             ColorConsole.WriteLine(Tab, $" {slicer.ToUpperInvariant()} ".Black().OnWhite());
             foreach (var group in workItems.GroupBy(x => x.Fields.GetPropertyValue(slicer ?? nameof(x.Fields.Tags))).OrderBy(x => x.Key))
@@ -337,43 +335,36 @@
 
         private void PrintWorkItems(string input, List<WorkItem> workItems)
         {
-            if (int.TryParse(input, out var index))
+            this.FlowStep = FlowStep.Details;
+            var split = input.Split(this.autoCompletionHandler.Separators, 2)?.Select(x => x.Trim()).ToArray();
+            if (split.Length == 2 && split.Contains("open", StringComparer.OrdinalIgnoreCase))
             {
-                var workItem = workItems.SingleOrDefault(wi => wi.Id.Equals(index));
-                this.PrintWorkItemDetails(workItem, 1);
-                ColorConsole.WriteLine();
+                var workItem = workItems.SingleOrDefault(item => item.Id.ToString().Equals(split.SingleOrDefault(s => !s.Equals("open", StringComparison.OrdinalIgnoreCase))));
+                Process.Start(new ProcessStartInfo { FileName = workItem.Url.Replace("_apis/wit/workItems", "_workitems/edit"), UseShellExecute = true });
             }
             else
             {
-                var split = input.Split(this.autoCompletionHandler.Separators, 2)?.Select(x => x.Trim()).ToArray();
-                if (split.Length == 2 && split.Contains("open", StringComparer.OrdinalIgnoreCase))
+                var items = workItems.Where(item => item.Flatten().Any(x => x.Key.Contains(split.FirstOrDefault(), StringComparison.OrdinalIgnoreCase) && x.Value.Contains(split.LastOrDefault(), StringComparison.OrdinalIgnoreCase)))?.ToList();
+                if (items?.Count <= 0)
                 {
-                    var workItem = workItems.SingleOrDefault(item => item.Id.ToString().Equals(split.SingleOrDefault(s => !s.Equals("open", StringComparison.OrdinalIgnoreCase))));
-                    Process.Start(new ProcessStartInfo { FileName = workItem.Url.Replace("_apis/wit/workItems", "_workitems/edit"), UseShellExecute = true });
+                    items = workItems.Where(item => item.Flatten().Any(x => x.Value.Contains(input, StringComparison.OrdinalIgnoreCase)))?.ToList();
                 }
-                else
+
+                if (items?.Count > 0)
                 {
-                    var items = workItems.Where(item => item.Flatten().Any(x => x.Key.Contains(split.FirstOrDefault(), StringComparison.OrdinalIgnoreCase) && x.Value.Contains(split.LastOrDefault(), StringComparison.OrdinalIgnoreCase)))?.ToList();
-                    if (items?.Count <= 0)
+                    foreach (var workItem in items.Select((x, i) => (x, i: i + 1)))
                     {
-                        items = workItems.Where(item => item.Flatten().Any(x => x.Value.Contains(input, StringComparison.OrdinalIgnoreCase)))?.ToList();
+                        this.PrintWorkItemDetails(workItem.x, workItem.i);
                     }
 
-                    if (items?.Count > 0)
-                    {
-                        foreach (var workItem in items.Select((x, i) => (x, i: i + 1)))
-                        {
-                            this.PrintWorkItemDetails(workItem.x, workItem.i);
-                        }
-
-                        ColorConsole.WriteLine();
-                    }
+                    ColorConsole.WriteLine();
                 }
             }
         }
 
-        private void PrintWorkItemDetails(WorkItem workItem, int index)
+        private bool PrintWorkItemDetails(WorkItem workItem, int index)
         {
+            this.FlowStep = FlowStep.Details;
             if (workItem != null)
             {
                 ColorConsole.WriteLine();
@@ -383,8 +374,10 @@
                 ColorConsole.WriteLine(Tab, nameof(workItem.Fields.AssignedTo).PadLeft(Padding).Blue(), ": ", workItem.Fields.AssignedTo);
                 ColorConsole.WriteLine(Tab, nameof(workItem.Fields.IterationPath).PadLeft(Padding).Blue(), ": ", workItem.Fields.IterationPath);
                 ColorConsole.WriteLine(Tab, nameof(workItem.Fields.AreaPath).PadLeft(Padding).Blue(), ": ", workItem.Fields.AreaPath);
-                ColorConsole.WriteLine(Tab, nameof(workItem.Fields.Description).PadLeft(Padding).Blue(), ": ", string.IsNullOrWhiteSpace(workItem.Fields.Description) ? string.Empty : HttpUtility.HtmlDecode(Regex.Replace(workItem.Fields.Description.Replace(Environment.NewLine, Environment.NewLine + Tab + Tab.PadLeft(Padding + 1)), "<.*?>", string.Empty)));
+                ColorConsole.WriteLine(Tab, nameof(workItem.Fields.Description).PadLeft(Padding).Blue(), ": ", workItem.Fields.Description ?? string.Empty);
             }
+
+            return workItem != null;
         }
     }
 }

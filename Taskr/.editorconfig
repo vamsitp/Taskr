@@ -132,3 +132,6 @@ dotnet_diagnostic.SA1108.severity = none
 
 # S1135: Track uses of "TODO" tags
 dotnet_diagnostic.S1135.severity = none
+
+# S1075: URIs should not be hardcoded
+dotnet_diagnostic.S1075.severity = none

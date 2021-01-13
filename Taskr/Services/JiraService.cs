@@ -19,6 +19,7 @@
     {
         internal const string DefaultQuery = "project={0} AND issuetype=Subtask";
 
+        private const string BrowseUrl = "https://xdevz.atlassian.net/browse/{0}";
         private const string MediaType = "application/json";
         private const string AuthHeader = "Authorization";
 
@@ -53,10 +54,11 @@
                 var items = result.issues.Select(x => new WorkItem
                 {
                     Id = int.Parse(x.id),
+                    Url = string.Format(BrowseUrl, x.key),
                     Fields = new Fields
                     {
-                        Title = x.fields.summary,
-                        Description = x.fields.description?.ToString() ?? string.Empty,
+                        Title = $"[{x.key}] {x.fields.summary}",
+                        DescriptionHtml = x.fields.description?.ToString() ?? string.Empty,
                         State = x.fields.status?.name,
                         Priority = short.Parse(x.fields.priority?.id ?? "0"),
                         IterationPath = x.fields.iterations?.FirstOrDefault()?.name,

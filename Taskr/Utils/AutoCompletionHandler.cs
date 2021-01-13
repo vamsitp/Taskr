@@ -12,7 +12,7 @@
         internal AutoCompletionHandler(Worker worker)
         {
             this.worker = worker;
-            this.props = typeof(Fields).GetProperties().Select(p => p.Name).Where(x => !x.Equals("AssignedToObj"));
+            this.props = typeof(Fields).GetProperties().Select(p => p.Name).Where(x => !x.Equals("AssignedToObj") && !x.Equals("DescriptionHtml"));
         }
 
         // characters to start completion from
@@ -26,7 +26,7 @@
             {
                 return this.worker.AccountsData.Items.Select((x, i) => (i + 1).ToString()).ToArray();
             }
-            else if (this.worker.FlowStep == FlowStep.Details)
+            else if (this.worker.FlowStep == FlowStep.Slicers || this.worker.FlowStep == FlowStep.Details)
             {
                 var id = -1;
                 if (string.IsNullOrWhiteSpace(text))
