@@ -48,7 +48,11 @@
         public Worker(IOptionsMonitor<AccountSettings> settingsMonitor, ILogger<Worker> logger, IServiceProvider services, IHostApplicationLifetime appLifetime)
         {
             this.settings = settingsMonitor.CurrentValue;
-            settingsMonitor.OnChange(changedSettings => { this.settings = changedSettings; });
+            settingsMonitor.OnChange(changedSettings =>
+            {
+                this.settings = changedSettings;
+                this.AccountsData = new AccountsData { Items = this.settings.Accounts.Where(a => a.Enabled).ToDictionary(x => x, x => new List<WorkItem>()) };
+            });
             this.logger = logger;
             this.services = services;
             this.appLifetime = appLifetime;
@@ -328,7 +332,7 @@
                 ColorConsole.WriteLine(Tab, $" {group.Key} ".White().OnDarkBlue());
                 foreach (var workItem in group.OrderBy(x => x.Fields.State))
                 {
-                    ColorConsole.WriteLine(Tab, $"[{workItem.Fields.State.FirstOrDefault()}] ".Color(StateColors[workItem.Fields.State]), $"{workItem.Id} - {workItem.Fields.Title}");
+                    ColorConsole.WriteLine(Tab, $"[{workItem.Fields.State.FirstOrDefault()}] ".Color(StateColors[workItem.Fields.State]), $"{workItem.Id} - {workItem.Fields.Title}", $" ({workItem.Fields.AssignedTo.Split(' ').FirstOrDefault()} - {workItem.Fields.StateDurationDays}d)".Color(StateColors[workItem.Fields.State]));
                 }
             }
         }
@@ -369,7 +373,7 @@
             {
                 ColorConsole.WriteLine();
                 ColorConsole.WriteLine(Tab, $"{index}. ".PadLeft(Padding + 2), workItem.Id.ToString().Color(StateColors[workItem.Fields.State]), " - ", workItem.Fields.Title.Color(StateColors[workItem.Fields.State]));
-                ColorConsole.WriteLine(Tab, string.Empty.PadLeft(Padding), "  ", $" P{workItem.Fields.Priority} / OE = {workItem.Fields.OriginalEstimate} / CW = {workItem.Fields.CompletedWork} / RW = {workItem.Fields.RemainingWork} / {workItem.Fields.State} ({workItem.Fields.Reason}) ".Black().OnGray());
+                ColorConsole.WriteLine(Tab, string.Empty.PadLeft(Padding), "  ", $" P{workItem.Fields.Priority} / OE = {workItem.Fields.OriginalEstimate} / CW = {workItem.Fields.CompletedWork} / RW = {workItem.Fields.RemainingWork} / {workItem.Fields.State} ({workItem.Fields.Reason} - {workItem.Fields.StateDurationDays}d) ".Black().OnGray());
                 ColorConsole.WriteLine(Tab, nameof(workItem.Fields.Tags).PadLeft(Padding).Blue(), ": ", workItem.Fields.Tags);
                 ColorConsole.WriteLine(Tab, nameof(workItem.Fields.AssignedTo).PadLeft(Padding).Blue(), ": ", workItem.Fields.AssignedTo);
                 ColorConsole.WriteLine(Tab, nameof(workItem.Fields.IterationPath).PadLeft(Padding).Blue(), ": ", workItem.Fields.IterationPath);

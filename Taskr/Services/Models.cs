@@ -123,6 +123,15 @@ namespace Taskr
 
         [JsonProperty("Microsoft.VSTS.Scheduling.RemainingWork")]
         public float RemainingWork { get; set; }
+
+        [JsonProperty("Microsoft.VSTS.Common.StateChangeDate")]
+        public DateTime StateChangeDate { get; set; }
+
+        [JsonIgnore]
+        public int StateDurationDays => DateTime.Now.Subtract(this.StateChangeDate).Days;
+
+        // [JsonIgnore]
+        // public string StateDurationBar => string.Join(".", Enumerable.Range(0, this.StateDurationDays > 50 ? 50 : this.StateDurationDays).Select(x => string.Empty));
     }
 
     public class AssignedTo

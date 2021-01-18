@@ -19,7 +19,7 @@
     {
         internal const string DefaultQuery = "project={0} AND issuetype=Subtask";
 
-        private const string BrowseUrl = "https://xdevz.atlassian.net/browse/{0}";
+        private const string BrowseUrl = "https://{0}.atlassian.net/browse/{1}";
         private const string MediaType = "application/json";
         private const string AuthHeader = "Authorization";
 
@@ -43,7 +43,7 @@
 
                 // var defaultQuery = string.IsNullOrWhiteSpace(this.settings.Query) ? DefaultQuery : this.settings.Query; //  The default query could be related to AzDO
                 var query = HttpUtility.UrlEncode(string.Format(CultureInfo.InvariantCulture, string.IsNullOrWhiteSpace(account.Query) ? DefaultQuery : account.Query, account.Project));
-                var baseUrl = $"https://{account.Org}.atlassian.net/rest/api/3/search?jql={query}&fields=id,summary,description,status,priority,labels,assignee,issuetype,customfield_10020&maxResults={Extensions.MaxSize}";
+                var baseUrl = $"https://{account.Org}.atlassian.net/rest/api/3/search?jql={query}&fields=id,summary,description,status,priority,labels,assignee,issuetype,statuscategorychangedate,customfield_10020&maxResults={Extensions.MaxSize}";
                 var result = await baseUrl
                     .WithHeader(AuthHeader, pat)
                     .WithHeader("Accept", MediaType)
@@ -54,7 +54,7 @@
                 var items = result.issues.Select(x => new WorkItem
                 {
                     Id = int.Parse(x.id),
-                    Url = string.Format(BrowseUrl, x.key),
+                    Url = string.Format(BrowseUrl, account.Org, x.key),
                     Fields = new Fields
                     {
                         Title = $"[{x.key}] {x.fields.summary}",
@@ -63,6 +63,7 @@
                         Priority = short.Parse(x.fields.priority?.id ?? "0"),
                         IterationPath = x.fields.iterations?.FirstOrDefault()?.name,
                         Tags = string.Join(",", x.fields.labels),
+                        StateChangeDate = x.fields.statuscategorychangedate,
                         AssignedToObj = new AssignedTo { DisplayName = x.fields.assignee?.displayName, UniqueName = x.fields.assignee?.emailAddress },
                     },
                 });
