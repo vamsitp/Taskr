@@ -6,7 +6,11 @@
     using System.Net.Http;
     using System.Threading.Tasks;
 
+    using ColoredConsole;
+
+    using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
+    using Newtonsoft.Json.Serialization;
 
     public static class Extensions
     {
@@ -66,6 +70,24 @@
             var httpResponseMessage = await Client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
             var redirectedUrl = httpResponseMessage.Headers.WwwAuthenticate.AsEnumerable().FirstOrDefault(i => i.Parameter.StartsWith("authorization_uri")).Parameter.Split('=', 2).LastOrDefault().Split('/').LastOrDefault();
             return redirectedUrl;
+        }
+
+        public static string ToJson(this object source, Formatting formatting = Formatting.Indented, JsonSerializerSettings jsonSerializerSettings = null, bool camelizePropertyNames = false)
+        {
+            if (jsonSerializerSettings == null)
+            {
+                jsonSerializerSettings = new JsonSerializerSettings
+                {
+                    Error = (o, e) =>
+                    {
+                        e.ErrorContext.Handled = true;
+                        ColorConsole.WriteLine(e.ToString().Red());
+                    },
+                    ContractResolver = camelizePropertyNames ? new CamelCasePropertyNamesContractResolver() : new DefaultContractResolver(),
+                };
+            }
+
+            return source != null ? JsonConvert.SerializeObject(source, formatting, jsonSerializerSettings) : string.Empty;
         }
     }
 }

@@ -313,4 +313,12 @@ namespace Taskr
         public DateTime endDate { get; set; }
     }
 
+    public class Op
+    {
+        public string op { get; set; }
+
+        public string path { get; set; }
+
+        public string value { get; set; }
+    }
 }

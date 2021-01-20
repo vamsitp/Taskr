@@ -124,6 +124,15 @@
                     {
                         await this.UpdateTool(stoppingToken);
                     }
+                    else if (key.Equals("up"))
+                    {
+                        ColorConsole.Write("This will update the 'Description' of all the Work-items from Plain-text to HTML. Continue? (Y/N) ");
+                        if (Console.ReadLine().EqualsIgnoreCase("Y"))
+                        {
+                            var acc = this.AccountsData.Items.ElementAt(this.Index - 1).Key;
+                            await (this.services.GetServices<IBacklogService>().SingleOrDefault(x => x.AccountType.Equals(acc.Type)) as AzDoService).UpdateWorkItems(acc, stoppingToken);
+                        }
+                    }
                     else
                     {
                         if (int.TryParse(key, out var index))

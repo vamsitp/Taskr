@@ -8,10 +8,12 @@
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
+    using System.Web;
 
     using ColoredConsole;
 
     using Flurl.Http;
+    using Flurl.Http.Content;
 
     using Microsoft.Extensions.Options;
 
@@ -33,6 +35,9 @@
 
         private const string WiqlUrl = "wiql?api-version=6.0";
         private const string WorkItemsUrl = "workitems?ids={0}&fields=System.Id,System.WorkItemType,System.Title,System.Description,System.Tags,System.State,System.Reason,System.AssignedTo,System.IterationPath,System.AreaPath,Microsoft.VSTS.Common.Priority,Microsoft.VSTS.Scheduling.OriginalEstimate,Microsoft.VSTS.Scheduling.CompletedWork,Microsoft.VSTS.Scheduling.RemainingWork,Microsoft.VSTS.Common.StateChangeDate&api-version=6.0";
+        private const string DescriptionField = "/fields/System.Description";
+        private const string AddOperation = "add";
+        private const string JsonPatchMediaType = "application/json-patch+json";
 
         private AccountSettings settings;
 
@@ -88,19 +93,49 @@
             }
             catch (Exception ex)
             {
-                this.LogError(ex, ex.Message);
+                await this.LogError(ex, ex.Message);
             }
 
             return workItemsList;
         }
 
-        private void LogError(Exception ex, string message)
+        public async Task UpdateWorkItems(Account account, CancellationToken cancellationToken)
+        {
+            var workItems = await this.GetWorkItems(account, cancellationToken);
+            foreach (var workItem in workItems)
+            {
+                try
+                {
+                    var html = HttpUtility.HtmlDecode(workItem.Fields.DescriptionHtml);
+                    if (!string.IsNullOrWhiteSpace(html))
+                    {
+                        var content = new[] { new Op { op = AddOperation, path = DescriptionField, value = html } }.ToJson();
+                        using (var stringContent = new CapturedStringContent(content, JsonPatchMediaType))
+                        {
+                            var pat = account.IsPat ? this.GetBase64Token(account.Token) : (BearerAuthHeaderPrefix + account.Token);
+                            await $"https://dev.azure.com/{account.Org}/{account.Project}/_apis/wit/workitems/{workItem.Id}?api-version=6.0"
+                                .WithHeader(AuthHeader, pat)
+                                .PatchAsync(stringContent);
+                            ColorConsole.Write(workItem.Id.ToString(), ".".Blue());
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    await this.LogError(ex, workItem.Id.ToString());
+                }
+            }
+
+            ColorConsole.WriteLine();
+        }
+
+        private async Task LogError(Exception ex, string message)
         {
             var fex = ex as FlurlHttpException;
             if (fex != null)
             {
-                var vex = fex.GetResponseJsonAsync<AzDOException>()?.GetAwaiter().GetResult();
-                message = vex?.Message ?? ex.Message;
+                var vex = await fex.GetResponseJsonAsync<AzDOException>();
+                message = $"{message ?? string.Empty}: {vex?.Message ?? ex.Message}";
             }
 
             ColorConsole.WriteLine(message?.Red() ?? string.Empty);
