@@ -19,7 +19,7 @@ namespace Taskr
 
     public class AccountsData
     {
-        public Dictionary<Account, List<WorkItem>> Items { get; set; }
+        public List<Account> Items { get; set; }
     }
 
     public enum AccountType
@@ -33,6 +33,7 @@ namespace Taskr
         public bool CheckUpdates { get; set; }
         public string Query { get; set; }
         public string Slicers { get; set; }
+        public List<string> Exclusions { get; set; }
         public Account[] Accounts { get; set; }
 
         [JsonIgnore]
@@ -49,6 +50,10 @@ namespace Taskr
         public string Slicers { get; set; }
         public AccountType Type { get; set; }
         public bool Enabled { get; set; }
+        public List<string> Exclusions { get; set; }
+
+        [JsonIgnore]
+        public List<WorkItem> WorkItems { get; set; }
 
         [JsonIgnore]
         public bool IsPat => this.Token.Length.Equals(52);

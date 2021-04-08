@@ -51,7 +51,7 @@
             settingsMonitor.OnChange(changedSettings =>
             {
                 this.settings = changedSettings;
-                this.AccountsData = new AccountsData { Items = this.settings.Accounts.Where(a => a.Enabled).ToDictionary(x => x, x => new List<WorkItem>()) };
+                this.AccountsData = new AccountsData { Items = this.settings.Accounts.Where(a => a.Enabled).ToList() };
             });
             this.logger = logger;
             this.services = services;
@@ -75,7 +75,7 @@
             ReadLine.HistoryEnabled = true;
             ReadLine.AutoCompletionHandler = this.autoCompletionHandler;
 
-            this.AccountsData = new AccountsData { Items = this.settings.Accounts.Where(a => a.Enabled).ToDictionary(x => x, x => new List<WorkItem>()) };
+            this.AccountsData = new AccountsData { Items = this.settings.Accounts.Where(a => a.Enabled).ToList() };
             await this.ProcessAsync(stoppingToken);
         }
 
@@ -100,7 +100,7 @@
                         if (this.FlowStep == FlowStep.Slicers)
                         {
                             var currentAccount = this.AccountsData.Items.ElementAt(this.Index - 1);
-                            this.PrintAllWorkItems(currentAccount.Key, currentAccount.Value);
+                            this.PrintAllWorkItems(currentAccount);
                             ColorConsole.WriteLine();
                         }
                         else
@@ -129,7 +129,7 @@
                         ColorConsole.Write("This will update the 'Description' of all the Work-items from Plain-text to HTML. Continue? (Y/N) ");
                         if (Console.ReadLine().EqualsIgnoreCase("Y"))
                         {
-                            var acc = this.AccountsData.Items.ElementAt(this.Index - 1).Key;
+                            var acc = this.AccountsData.Items.ElementAt(this.Index - 1);
                             await (this.services.GetServices<IBacklogService>().SingleOrDefault(x => x.AccountType.Equals(acc.Type)) as AzDoService).UpdateWorkItems(acc, stoppingToken);
                         }
                     }
@@ -147,7 +147,7 @@
                                 if (this.Index > 0)
                                 {
                                     var currentAccount = this.AccountsData.Items.ElementAt(this.Index - 1);
-                                    var workItem = currentAccount.Value.SingleOrDefault(wi => wi.Id.Equals(index));
+                                    var workItem = currentAccount.WorkItems.SingleOrDefault(wi => wi.Id.Equals(index));
                                     if (this.PrintWorkItemDetails(workItem, 1))
                                     {
                                         ColorConsole.WriteLine();
@@ -160,7 +160,7 @@
                             if (this.Index > 0)
                             {
                                 var currentAccount = this.AccountsData.Items.ElementAt(this.Index - 1);
-                                this.PrintWorkItems(key, currentAccount.Value);
+                                this.PrintWorkItems(key, currentAccount.WorkItems);
                             }
                         }
                     }
@@ -182,16 +182,14 @@
             await foreach (var items in results)
             {
                 var account = items.account;
-                var workItems = items.workItems ?? new List<WorkItem>();
-                var existing = this.AccountsData.Items.SingleOrDefault(a => a.Key.Name?.Equals(account.Name) == true || (a.Key.Org.Equals(account.Org) && a.Key.Project.Equals(account.Project)));
-                existing.Value.Clear();
-                existing.Value.AddRange(workItems);
+                account.WorkItems = items.workItems ?? new List<WorkItem>();
+                var workItems = account.WorkItems;
 
                 ColorConsole.WriteLine();
                 this.FlowStep = FlowStep.Slicers;
                 if (workItems?.Count > 0)
                 {
-                    this.PrintSlicers(account, workItems);
+                    this.PrintSlicers(account);
                 }
                 else
                 {
@@ -285,30 +283,32 @@
             }
         }
 
-        private void PrintSlicers(Account account, List<WorkItem> workItems)
+        private void PrintSlicers(Account account)
         {
             var slicers = (string.IsNullOrWhiteSpace(account.Slicers) ? this.settings.Slicers : account.Slicers).Split(new[] { ' ', ',', ';' }, StringSplitOptions.RemoveEmptyEntries)?.ToList();
             if (slicers?.Count > 0)
             {
-                var headers = slicers.SelectMany(s => workItems.GroupBy(x => x.Fields.GetPropertyValue(s)).OrderBy(x => x.Key));
+                // var headers = slicers.SelectMany(s => workItems.GroupBy(x => this.GetPropertyValue(x, s, account)).OrderBy(x => x.Key));
+                var headers = slicers.SelectMany(s => this.GetHeaders(account, s));
                 var padding = headers.Max(h => h.Key?.ToString()?.Replace($"{account.Project}\\", string.Empty)?.Length ?? 0) + Tab.Length;
                 foreach (var slicer in slicers)
                 {
-                    this.PrintSlicer(account, workItems, slicer, padding);
+                    this.PrintSlicer(account, slicer, padding);
                     ColorConsole.WriteLine();
                 }
             }
         }
 
-        private void PrintSlicer(Account account, List<WorkItem> workItems, string slicer, int padding)
+        private void PrintSlicer(Account account, string slicer, int padding)
         {
-            var headers = workItems.GroupBy(x => x.Fields.GetPropertyValue(slicer)).OrderBy(x => x.Key);
+            // var headers = workItems.GroupBy(x => this.GetPropertyValue(x, slicer, account)).OrderBy(x => x.Key);
+            var headers = this.GetHeaders(account, slicer);
             var max = headers.Max(x => x.Count());
             ColorConsole.WriteLine(Tab.PadLeft(padding + 1), $" {slicer.ToUpperInvariant()} ".Black().OnWhite());
             foreach (var header in headers)
             {
                 ColorConsole.Write($" {header.Key?.ToString()?.Replace($"{account.Project}\\", string.Empty) ?? string.Empty} ".PadLeft(padding).Color(ConsoleColor.Blue), HorizontalChar, VerticalChar);
-                var states = header.Select(x => x.Fields.State).OrderBy(s => s);
+                var states = header.Select(x => x.Item.Fields.State).OrderBy(s => s);
                 foreach (var state in states.GroupBy(x => x))
                 {
                     foreach (var item in state)
@@ -330,17 +330,20 @@
             ColorConsole.WriteLine($" {BorderChar}".PadLeft(padding + 2), string.Join(HorizontalChar, Enumerable.Range(0, max + 1).Select(x => string.Empty)), $" {max}".Blue());
         }
 
-        private void PrintAllWorkItems(Account account, List<WorkItem> workItems)
+        private void PrintAllWorkItems(Account account)
         {
             this.FlowStep = FlowStep.Details;
-            var slicer = (string.IsNullOrWhiteSpace(account.Slicers) ? this.settings.Slicers : account.Slicers).Split(new[] { ' ', ',', ';' }, StringSplitOptions.RemoveEmptyEntries)?.FirstOrDefault();
+            var slicer = (string.IsNullOrWhiteSpace(account.Slicers) ? this.settings.Slicers : account.Slicers).Split(new[] { ' ', ',', ';' }, StringSplitOptions.RemoveEmptyEntries)?.FirstOrDefault() ?? "Tags";
             ColorConsole.WriteLine(Tab, $" {slicer.ToUpperInvariant()} ".Black().OnWhite());
-            foreach (var group in workItems.GroupBy(x => x.Fields.GetPropertyValue(slicer ?? nameof(x.Fields.Tags))).OrderBy(x => x.Key))
+
+            // foreach (var group in workItems.GroupBy(x => this.GetPropertyValue(x, slicer ?? nameof(x.Fields.Tags), account)).OrderBy(x => x.Key))
+            foreach (var group in this.GetHeaders(account, slicer))
             {
                 ColorConsole.WriteLine();
                 ColorConsole.WriteLine(Tab, $" {group.Key} ".White().OnDarkBlue());
-                foreach (var workItem in group.OrderBy(x => x.Fields.State))
+                foreach (var item in group.OrderBy(x => x.Item.Fields.State))
                 {
+                    var workItem = item.Item;
                     ColorConsole.WriteLine(Tab, $"[{workItem.Fields.State.FirstOrDefault()}] ".Color(StateColors[workItem.Fields.State]), $"{workItem.Id} - {workItem.Fields.Title}", $" ({workItem.Fields.AssignedTo.Split(' ').FirstOrDefault()} - {workItem.Fields.StateDurationDays}d)".Color(StateColors[workItem.Fields.State]));
                 }
             }
@@ -391,6 +394,13 @@
             }
 
             return workItem != null;
+        }
+
+        private IOrderedEnumerable<IGrouping<string, (string Key, WorkItem Item)>> GetHeaders(Account account, string slicer)
+        {
+            // return account.WorkItems.SelectMany(x => x.Fields.GetPropertyValues(slicer).Select(y => new { Key = y, Item = x })).GroupBy(x => x.Key).OrderBy(x => x.Key);
+            var exclusions = account.Exclusions?.Count > 0 ? account.Exclusions : this.settings.Exclusions;
+            return account.WorkItems.SelectMany(x => x.Fields.GetPropertyValues(slicer).Select(y => (Key: y, Item: x))).Where(x => !(exclusions?.Count > 0) || exclusions.All(e => !x.Key.ContainsIgnoreCase(e))).GroupBy(x => x.Key).OrderBy(x => x.Key);
         }
     }
 }

@@ -35,6 +35,12 @@
             return obj.GetType().GetProperty(propertyName.Trim()).GetValue(obj, null);
         }
 
+        // https://stackoverflow.com/questions/48638048/how-to-split-string-by-delimeter-and-multiple-group-by-and-count-them-in-linq
+        public static List<string> GetPropertyValues(this object obj, string propertyName)
+        {
+            return obj.GetType().GetProperty(propertyName.Trim()).GetValue(obj, null)?.ToString()?.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)?.Select(x => x?.Trim()).ToList();
+        }
+
         public static bool ContainsIgnoreCase(this string item, string subString)
         {
             return item?.IndexOf(subString, StringComparison.OrdinalIgnoreCase) >= 0;

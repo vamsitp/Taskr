@@ -62,7 +62,7 @@
                         State = x.fields.status?.name,
                         Priority = short.Parse(x.fields.priority?.id ?? "0"),
                         IterationPath = x.fields.iterations?.FirstOrDefault()?.name,
-                        Tags = string.Join(",", x.fields.labels),
+                        Tags = string.Join("; ", x.fields.labels),
                         StateChangeDate = x.fields.statuscategorychangedate,
                         AssignedToObj = new AssignedTo { DisplayName = x.fields.assignee?.displayName, UniqueName = x.fields.assignee?.emailAddress },
                     },
