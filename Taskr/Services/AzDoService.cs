@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.Globalization;
+    using System.IO;
     using System.Linq;
     using System.Net.Http;
     using System.Text;
@@ -109,6 +110,24 @@
                     var html = HttpUtility.HtmlDecode(workItem.Fields.DescriptionHtml);
                     if (!string.IsNullOrWhiteSpace(html))
                     {
+                        var updatesFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Taskr_Updates.csv");
+                        if (File.Exists(updatesFile))
+                        {
+                            var updates = CsvService.GetRecords<dynamic>(File.OpenRead(updatesFile));
+                            foreach (dynamic update in updates)
+                            {
+                                var old = update.Old;
+                                var updated = update.New;
+                                if (!string.IsNullOrWhiteSpace(old) && !string.IsNullOrWhiteSpace(updated))
+                                {
+                                    // Debug.WriteLine($"{workItem.Id} - Old: {html}");
+                                    html = html.Replace(old, updated).Replace(HttpUtility.UrlDecode(old), updated);
+
+                                    // Debug.WriteLine($"{workItem.Id} - New: {html}");
+                                }
+                            }
+                        }
+
                         var content = new[] { new Op { op = AddOperation, path = DescriptionField, value = html } }.ToJson();
                         using (var stringContent = new CapturedStringContent(content, JsonPatchMediaType))
                         {
