@@ -100,52 +100,53 @@
             return workItemsList;
         }
 
-        public async Task UpdateWorkItems(Account account, CancellationToken cancellationToken)
+        public Task UpdateWorkItems(Account account, CancellationToken cancellationToken)
         {
-            var workItems = await this.GetWorkItems(account, cancellationToken);
-            foreach (var workItem in workItems)
-            {
-                try
-                {
-                    var html = HttpUtility.HtmlDecode(workItem.Fields.DescriptionHtml);
-                    if (!string.IsNullOrWhiteSpace(html))
-                    {
-                        var updatesFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Taskr_Updates.csv");
-                        if (File.Exists(updatesFile))
-                        {
-                            var updates = CsvService.GetRecords<dynamic>(File.OpenRead(updatesFile));
-                            foreach (dynamic update in updates)
-                            {
-                                var old = update.Old;
-                                var updated = update.New;
-                                if (!string.IsNullOrWhiteSpace(old) && !string.IsNullOrWhiteSpace(updated))
-                                {
-                                    // Debug.WriteLine($"{workItem.Id} - Old: {html}");
-                                    html = html.Replace(old, updated).Replace(HttpUtility.UrlDecode(old), updated);
+            ////var workItems = await this.GetWorkItems(account, cancellationToken);
+            ////foreach (var workItem in workItems)
+            ////{
+            ////    try
+            ////    {
+            ////        var html = HttpUtility.HtmlDecode(workItem.Fields.DescriptionHtml);
+            ////        if (!string.IsNullOrWhiteSpace(html))
+            ////        {
+            ////            var updatesFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Taskr_Updates.csv");
+            ////            if (File.Exists(updatesFile))
+            ////            {
+            ////                var updates = CsvService.GetRecords<dynamic>(File.OpenRead(updatesFile));
+            ////                foreach (dynamic update in updates)
+            ////                {
+            ////                    var old = update.Old;
+            ////                    var updated = update.New;
+            ////                    if (!string.IsNullOrWhiteSpace(old) && !string.IsNullOrWhiteSpace(updated))
+            ////                    {
+            ////                        // Debug.WriteLine($"{workItem.Id} - Old: {html}");
+            ////                        html = html.Replace(old, updated).Replace(HttpUtility.UrlDecode(old), updated);
 
-                                    // Debug.WriteLine($"{workItem.Id} - New: {html}");
-                                }
-                            }
-                        }
+            ////                        // Debug.WriteLine($"{workItem.Id} - New: {html}");
+            ////                    }
+            ////                }
+            ////            }
 
-                        var content = new[] { new Op { op = AddOperation, path = DescriptionField, value = html } }.ToJson();
-                        using (var stringContent = new CapturedStringContent(content, JsonPatchMediaType))
-                        {
-                            var pat = account.IsPat ? this.GetBase64Token(account.Token) : (BearerAuthHeaderPrefix + account.Token);
-                            await $"https://dev.azure.com/{account.Org}/{account.Project}/_apis/wit/workitems/{workItem.Id}?api-version=6.0"
-                                .WithHeader(AuthHeader, pat)
-                                .PatchAsync(stringContent);
-                            ColorConsole.Write(workItem.Id.ToString(), ".".Blue());
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    await this.LogError(ex, workItem.Id.ToString());
-                }
-            }
+            ////            var content = new[] { new Op { op = AddOperation, path = DescriptionField, value = html } }.ToJson();
+            ////            using (var stringContent = new CapturedStringContent(content, JsonPatchMediaType))
+            ////            {
+            ////                var pat = account.IsPat ? this.GetBase64Token(account.Token) : (BearerAuthHeaderPrefix + account.Token);
+            ////                await $"https://dev.azure.com/{account.Org}/{account.Project}/_apis/wit/workitems/{workItem.Id}?api-version=6.0"
+            ////                    .WithHeader(AuthHeader, pat)
+            ////                    .PatchAsync(stringContent);
+            ////                ColorConsole.Write(workItem.Id.ToString(), ".".Blue());
+            ////            }
+            ////        }
+            ////    }
+            ////    catch (Exception ex)
+            ////    {
+            ////        await this.LogError(ex, workItem.Id.ToString());
+            ////    }
+            ////}
 
-            ColorConsole.WriteLine();
+            ////ColorConsole.WriteLine();
+            return Task.CompletedTask;
         }
 
         private async Task LogError(Exception ex, string message)

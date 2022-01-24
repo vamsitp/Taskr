@@ -341,7 +341,9 @@
             {
                 ColorConsole.WriteLine();
                 ColorConsole.WriteLine(Tab, $" {group.Key} ".White().OnDarkBlue());
+#pragma warning disable S3267 // Loops should be simplified with "LINQ" expressions
                 foreach (var item in group.OrderBy(x => x.Item.Fields.State))
+#pragma warning restore S3267 // Loops should be simplified with "LINQ" expressions
                 {
                     var workItem = item.Item;
                     ColorConsole.WriteLine(Tab, $"[{workItem.Fields.State.FirstOrDefault()}] ".Color(StateColors[workItem.Fields.State]), $"{workItem.Id} - {workItem.Fields.Title}", $" ({workItem.Fields.AssignedTo.Split(' ').FirstOrDefault()} - {workItem.Fields.StateDurationDays}d)".Color(StateColors[workItem.Fields.State]));
