@@ -30,6 +30,7 @@ Examples:
   // Defaults
   "Query": "SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '{0}' AND [System.WorkItemType] = 'Task' ORDER BY [System.Id] ASC",
   "Slicers": "Tags,Priority,IterationPath",  
+  "Exclusions": [ "MD_", "DT_", "MO_" ], // Any Slicer-values to be excluded. Can be overridden at each Account level too.
   "Accounts": [ // Azure DevOps Project details
     {
       "Name": "Account-1",
